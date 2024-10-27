@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# Check whether the PDF files use Libertinus fonts and do not have other problems
+# (c) 2024 by Manfred Jeusfeld. This script is made available under the
+# Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
+#
+# Manfred 2024-08-17 (2024-10-14)
+
+echo "Checking for phrase 'Creative Commons' in PDF files to see whether text is selectable ..."
+CREATIVECOMMONS="found"
+for f in *.pdf
+do
+  # PDF files should have a "Creative Commons" on the first page
+  pdftotext -f 1 -l 1 $f - | grep 'Creative Commons' 2>&1 > /dev/null
+  # pdf2txt -m 2 $f | grep 'Creative Commons' 2>&1 > /dev/null
+  if [[ $? != 0 ]];
+  then
+     if [[ "$f" != "xpreface.pdf" && "$f" != "preface.pdf" && "$f" != "Preface.pdf" ]]
+     then
+        CREATIVECOMMONS="notfound"
+        echo "PDF file $f seems to have no readable text included but only binary data"
+     fi
+  fi
+done
+if [[ $CREATIVECOMMONS == "notfound" ]] ; then
+  echo " ===> Make sure that paper PDFs have readable/selectable text in them "
+  echo " "
+fi
+
+
+
+echo "Checking for Non-Libertinus font in paper PDFs ..."
+NONLIBERTINUSFOUND="no"
+for f in *.pdf
+do
+  # Files created with Windows Word/LibreOfffice apparently use CIDFont+F instead Libertinus as font name (?)
+  strings $f | grep FontName | grep -q -E 'Libertinus|CIDFont.F5'
+  if [[ $? != 0 ]];
+  then
+     if [[ "$f" != "xpreface.pdf" && "$f" != "preface.pdf" && "$f" != "Preface.pdf" ]]
+     then
+       NONLIBERTINUSFOUND="found"
+       echo "PDF file $f does not use Libertinus font family"
+     fi
+  fi
+done
+if [[ $NONLIBERTINUSFOUND == "found" ]] ; then
+  echo " ===> Make sure that paper PDFs use the Libertinus font family; this only applies to papers PDFs, prefaces that have no paper character do not necessarily need to use Libertinus"
+fi
+
+echo "Checking for duplicate PDF files ..."
+DUPPDFSFILES=`find . -name '*.pdf' ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD`
+if [ "$DUPPDFSFILES" != "" ]
+then echo " ";
+     echo " ==========> ERROR (P2) with duplicate PDF files!!!!"
+     find . -name '*.pdf' ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD
+fi
+
+

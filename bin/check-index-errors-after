@@ -1,0 +1,306 @@
+#!/bin/bash
+# 
+# Check wether the index.html file in a volume has some common errors
+# (c) 2021 by Manfred Jeusfeld. This script is made available under the
+# Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
+#
+# check-index-errors-after is like check-index-errors but checks whether some editings are missing
+#
+# Manfred 2020-03-20 (2024-06-09)
+
+# to distinguish regular index files for "semantified" index files
+indexformat=regular
+if grep -q "foaf:" index.html;
+then indexformat=semantic
+fi
+
+
+# determine the volume directory name
+if [[ $(cd ..; pwd) == $HOME/www ]]
+then
+        VOLNR=$(basename $PWD);
+	VOLPATH=CEUR-WS.org/${VOLNR};
+else
+        echo "WARNING check-index-errors-after: call this script only in a directory like Vol-1234"
+fi
+
+
+if grep -n "Workshop on Publishing Papers" index.html;
+then echo " ";
+     echo " ==========> ERROR (1) in index.html!!!!";
+     echo "String 'Workshop on Publishing Papers' found in index.html";
+     echo " "; echo " ";
+fi
+
+if grep -n "OPub" index.html;
+then echo " ";
+     echo " ==========> ERROR (2) in index.html!!!!";
+     echo "String 'OPub' found in index.html";
+     echo " "; echo " ";
+fi
+
+if grep -n "Coeditor," index.html;
+then echo " ";
+     echo " ==========> ERROR (3) in index.html!!!!";
+     echo "String 'Coeditor' found in the footer of index.html";
+     echo " "; echo " ";
+fi
+
+if grep -n "<li>" index.html;
+then echo " ";
+     echo " ==========> ERROR (4) in index.html!!!!";
+     echo "<li> element without ID found in index.html";
+     echo " "; echo " ";
+fi
+
+if grep -n "workshop-website.org/loc" index.html;
+then echo " ";
+     echo " ==========> ERROR (5) in index.html!!!!";
+     echo "wrong URL workshop-website.org/loc found in index.html";
+     echo " "; echo " ";
+fi
+
+if grep -n "Vol-XXX" index.html;
+then echo " ";
+     echo " ==========> ERROR (6) in index.html!!!!";
+     echo "Some references Vol-XXX to the volume number are not yet replaced in index.html";
+     echo " "; echo " ";
+fi
+
+if grep -n "JJJJ" index.html;
+then echo " ";
+     echo " ==========> ERROR (7) in index.html!!!!";
+     echo "Some references JJJJ to the publication year are not yet replaced in index.html";
+     echo " "; echo " ";
+fi
+
+
+if grep -n "YYYY" index.html;
+then echo " ";
+     echo " ==========> ERROR (8) in index.html!!!!";
+     echo "Some references YYYY to the event year are not yet replaced in index.html";
+     echo " "; echo " ";
+fi
+
+if grep -n "\-C</span>" index.html;
+then echo " ";
+     echo " ==========> ERROR (9) in index.html!!!!";
+     echo "String -C found; check whether the URN is correctly set in index.html";
+     echo " "; echo " ";
+fi
+
+if grep -n "# Instructions" index.html;
+then echo " ";
+     echo " ==========> ERROR (10) in index.html!!!!";
+     echo "Instruction comment lines in index.html are not removed";
+     echo " "; echo " ";
+fi
+
+if grep -n "<pre>" index.html;
+then echo " ";
+     echo " ==========> ERROR (11) in index.html!!!!";
+     echo "All lines containing <pre> should be removed from index.html, not just commented";
+     echo " "; echo " ";
+fi
+
+if grep -n "Publishing Papers with CEUR-WS" index.html;
+then echo " ";
+     echo " ==========> ERROR (12) in index.html!!!!";
+     echo "wrong proceedings title Publishing Papers with CEUR-WS";
+fi
+
+if grep -n "Copying permitted for private and academic purposes" index.html;
+then echo " ";
+     echo " ==========> ERROR (13) in index.html!!!!";
+     echo "Old non-CC-BY copyright statement; also check the footer in index.html";
+fi
+
+if grep -n "AUXAUTHOR" index.html;
+then echo " ";
+     echo " ==========> ERROR (14) in index.html!!!!";
+     echo "Unsupported AUXAUTHOR found in index.html; replace by CEURAUTHOR; similar with AUXTITLE";
+fi
+
+grep -q "../ceur-ws.css" index.html
+if [[ $? != 0 ]]; 
+then echo " ";
+     echo " ==========> ERROR (15) in index.html!!!!";
+     echo "wrong stylesheet; must be ../ceur-ws.css";
+fi
+
+
+file index.html | grep -q "UTF-16"
+if [[ $? == 0 ]];
+then echo " ";
+     echo " ==========> ERROR (16) in index.html!!!!";
+     echo "index.html encoded in UTF-16; must be in UTF-8";
+fi
+
+grep -q  "urn:nbn:de:0074" index.html
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (17) in index.html!!!!";
+     echo "Prefix urn:nbn:de:0074 missing in URN";
+fi
+
+grep -q  "CEURTOC" index.html
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (18) in index.html!!!!";
+     echo "DIV section CEURTOC missing; compare to Vol-XXX/index.html";
+fi
+
+if grep -n "<script" index.html;
+then echo " ";
+     echo " ==========> ERROR (19) in index.html!!!!";
+     echo "index.html contains a script; scripts are forbidden";
+fi
+
+
+grep -q  "$VOLPATH" index.html
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (20) in index.html!!!!";
+     echo "HTML title must contain the volume path $VOLPATH";
+fi
+
+grep -q  "CEURLOCTIME" index.html
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (21) in index.html!!!!";
+     echo "CEURLOCTIME element is missing; compare to Vol-XXX/index.html";
+fi
+
+if [ $indexformat == regular ]; 
+then
+  if grep -o -P '(?<=CEURAUTHOR">).*(?=</span)' index.html | grep -v ', Jr.' | grep ',' ;
+  then echo " ";
+       echo " ==========> ERROR (22) in index.html!!!!";
+       echo "Some CEURAUTHOR lines contain commas. Use one line per CEURAUTHOR. A CEURAUTHOR is a single person. Use multiple CEURAUTHOR fields when a paper has multiple authors.";
+       grep -o -P '(?<=CEURAUTHOR">).*(?=</span)' index.html | grep ','
+  fi
+
+  if grep -o -P '(?<=class="CEUR).*(?=</span)' index.html | grep '<' | grep -v '</span' ;
+  then echo " ";
+       echo " ==========> ERROR (23) in index.html!!!!";
+       echo "Some CEUR span field contains '<' e.g. for a HTML tag. CEUR span fields may not contain HTML tags!";
+       grep -o -P '(?<=class="CEUR).*(?=</span)' index.html | grep '<'  | grep -v '</span'
+  fi
+fi
+
+if grep -q "http://ceur-ws.org/ceur-ws.css" index.html;
+then echo " ";
+     echo " ==========> ERROR (24) in index.html!!!!";
+     echo "index.html contains absolute path http//ceur-ws.org/ceur-ws.css; must be ../ceur-ws.css";
+fi
+
+for KEYWORD in CEURVERSION CEURVOLTITLE CEURFULLTITLE CEURURN CEURCOLOCATED CEURPUBYEAR CEURVOLACRONYM CEURTOC CEURLOCTIME CEURPUBDATE CEURVOLNR
+do
+  NRWORDS=`grep -wc $KEYWORD index.html`
+  if [ "$NRWORDS" -ne "1" ]
+  then 
+    echo " ==========> ERROR (25) in index.html!!!!";
+    echo "The label $KEYWORD must have exactly one value in index.html. It your case, the value is $NRWORDS."
+    grep $KEYWORD index.html
+  fi
+done
+
+for KEYWORD in CEURVOLEDITOR
+do
+  NRWORDS=`grep -wc $KEYWORD index.html`
+  if [ "$NRWORDS" == "0" ]
+  then
+    echo " ==========> ERROR (26) in index.html!!!!";
+    echo "The label $KEYWORD must have at least one value in index.html. It your case, the value is $NRWORDS."
+  fi
+done
+
+if grep CEURAUTHOR index.html | grep -q " </span>";
+then echo " ";
+     echo " ==========> ERROR (27) in index.html!!!!";
+     echo "index.html contains CEURAUTHOR SPAN elements that end with a blank character. This creates unwanted variants for labels such as author names.";
+       grep -n -P ' </span>' index.html
+fi
+
+if grep CEURAUTHOR index.html | grep -q " and";
+then echo " ";
+     echo " ==========> ERROR (28) in index.html!!!!";
+     echo "index.html contains CEURAUTHOR elements using 'and' as separator instead ','.";
+       grep -n -P 'CEURAUTHOR.*</span>, and' index.html
+fi
+
+if grep -q "Mary Y. Writter" index.html;
+then echo " ";
+     echo " ==========> ERROR (29) in index.html!!!!";
+     echo "index.html contains a synthetic author name from Vol-XXX, here Mary Y. Writter";
+fi
+
+DUPPDFS=`grep "<a href=" index.html | grep pdf | sed "s/<a href/\\n<a href/g" | sed 's/\"/\"><\/a>\n/2' | grep href | sort | uniq --count | grep -v "1 <a"`
+if [ "$DUPPDFS" != "" ]
+then echo " ";
+     echo " ==========> ERROR (30) in index.html!!!!";
+     echo " index.html contains multiple links to the same PDF file!";
+     echo $DUPPDFS
+fi
+
+DUPTITLES=`grep "CEURTITLE" index.html | sed "s/<a href/\\n<a href/g" | sed 's/\"/\"><\/a>\n/2' | grep href | sort | uniq --count | grep -v "1 <a"`
+if [ "$DUPTITLES" != "" ]
+then echo " ";
+     echo " ==========> ERROR (30) in index.html!!!!";
+     echo " index.html contains multiple CEURTITLEs with the same label!";
+     echo $DUPTITLES
+fi
+
+if grep -n "mm-dd" index.html;
+then echo " ";
+     echo " ==========> ERROR (31) in index.html!!!!";
+     echo "CEURPUBDATE is currently set to yyyy-mm-dd in index.html; set it to the date when the volume was published";
+     echo " "; echo " ";
+fi
+
+
+if [ $indexformat == regular ];
+then
+  if grep -o -P '(?<=li id=).*(?=pdf)' index.html | grep '/' ;
+  then echo " ";
+       echo " ==========> ERROR (32) in index.html!!!!";
+       echo "Some papers appear to be in subdirectories. They shall be in the same directory as index.html";
+       grep -o -P '(?<=li id=).*(?=pdf)' index.html | grep '/'
+  fi
+fi
+
+grep "CEURVOLACRONYM" index.html |  grep -q  " 2"
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (33) in index.html!!!!";
+     echo "CEURVOLACRONYM must contain the year in which the event took place like in 'ABCD 2023'";
+fi
+
+
+for KEYWORD in CEURTITLE CEURAUTHOR CEURVOLTITLE
+do
+  if grep $KEYWORD index.html | grep -q "\.</span>";
+  then echo " ";
+       echo " ==========> ERROR (34) in index.html!!!!";
+       echo "$KEYWORD ends with a '.'. It should be just a title without ending with a dot.";
+       grep -n -P $KEYWORD index.html |  grep  '\.</span>' 
+  fi
+done
+
+grep -q  "<body>" index.html
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (E35) in index.html!!!!";
+     echo "The index.html file must contain the tag <body> without any parameters.";
+fi
+
+
+# only for after editing index.html
+grep "CEURPUBDATE" index.html |  grep -q `date +"%Y"` 
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (36) in index.html!!!!";
+     echo "Warning: The CEURPUBDATE at the end of the index.html file does not contain the current year. This is ok if changes were made in the year after the publication of the volume.";
+fi
+
+
