@@ -20,7 +20,7 @@
 
 # Utilities
 
--   The document verification utilities for CEUR-WS can be found in the repository: <https://github.com/yamadharma/ceurart-check>
+-   The document verification utilities for CEUR-WS can be found in the repository: <https://github.com/yamadharma/ceurart-check>.
 -   `check-pdf-errors`:
     -   Checks pdf files.
     -   Checks for the presence of the phrase 'Creative Commons' in pdf files.
