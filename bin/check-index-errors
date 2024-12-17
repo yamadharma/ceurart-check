@@ -205,7 +205,7 @@ then
   if grep -o -P '(?<=li id=).*(?=pdf)' index.html | grep '/' ;
   then echo " ";
        echo " ==========> ERROR (A25) in index.html!!!!";
-       echo "Some papers appear to be in subdirectories. They shall be in the same directory as index.html";
+       echo "Some papers appear to be in subdirectories or use absolute URLs. They shall be in the same directory as index.html and use relative URLs";
        grep -o -P '(?<=li id=).*(?=pdf)' index.html | grep '/'
   fi
 fi
@@ -219,11 +219,11 @@ fi
 
 for KEYWORD in CEURTITLE CEURAUTHOR CEURVOLTITLE
 do
-  if grep $KEYWORD index.html | grep -q "\.</span>";
+  if grep $KEYWORD index.html | grep -v 'Jr.' | grep -q "\.</span>";
   then echo " ";
        echo " ==========> ERROR (A27) in index.html!!!!";
-       echo "$KEYWORD ends with a '.'. It should be just a title without ending with a dot.";
-       grep -n -P $KEYWORD index.html |  grep  '\.</span>'
+       echo "$KEYWORD ends with a '.'. It should be just a label not ending with a dot.";
+       grep -n -P $KEYWORD index.html | grep -v 'Jr.' | grep  '\.</span>'
   fi
 done
 

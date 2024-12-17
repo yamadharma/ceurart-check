@@ -4,56 +4,138 @@
 # (c) 2024 by Manfred Jeusfeld. This script is made available under the
 # Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
 #
-# Manfred 2024-08-17 (2024-10-14)
+# Manfred 2024-08-17 (2024-12-02)
 
-echo "Checking for phrase 'Creative Commons' in PDF files to see whether text is selectable ..."
+which pdf2txt 2>&1 > /dev/null ; ec_pdf2txt=$?
+which pdf2txt.py 2>&1 > /dev/null ; ec_pdf2txtpy=$?
+
+if [[ ${ec_pdf2txt} == 0 ]]
+then
+    PDF2TXT="pdf2txt"
+elif [[ ${ec_pdf2txtpy} == 0 ]]
+then
+    PDF2TXT="pdf2txt.py"
+else
+    echo "We need pdf2txt from pdfminer <https://pdfminersix.readthedocs.io/>"
+    echo "PDF2TXT =" $PDF2TXT
+    exit
+fi
+
+echo ""
+echo "(*) Readable/Selectable text inside PDF files"
+ABSTRACTWORD="found"
+for f in *.pdf
+do
+  # PDF files should have the string "Abstract" on the first two pages (normally page 1)
+  ${PDF2TXT} -m 2 $f | grep -E 'Abstract|Copyright' 2>&1 > /dev/null
+  if [[ $? != 0 ]];
+  then
+     if [[ "$f" != "xpreface.pdf" && "$f" != "preface.pdf" && "$f" != "Preface.pdf" ]]
+     then
+        ABSTRACTWORD="notfound"
+        echo "PDF file $f seems to have no readable text included but only binary data"
+     fi
+  fi
+done
+if [[ "$ABSTRACTWORD" == "notfound" ]] ; then
+  echo " ===> Make sure that paper PDFs have readable/selectable text in them; use a proper PDF printer driver on Windows or use LibreOffice PDF export"
+  echo " "
+else
+  echo "ok"
+  echo " "
+fi
+
+
+echo ""
+echo "(*) CEUR-WS standard copyright phrase"
 CREATIVECOMMONS="found"
 for f in *.pdf
 do
-  # PDF files should have a "Creative Commons" on the first page
-  pdftotext -f 1 -l 1 $f - | grep 'Creative Commons' 2>&1 > /dev/null
-  # pdf2txt -m 2 $f | grep 'Creative Commons' 2>&1 > /dev/null
+  # PDF files should have the string "Creative Commons License" on the first two pages
+  ${PDF2TXT} -m 2 $f | grep -E 'Creative.*Commons.*License|Commons.*License.*Attribution' 2>&1 > /dev/null
   if [[ $? != 0 ]];
   then
      if [[ "$f" != "xpreface.pdf" && "$f" != "preface.pdf" && "$f" != "Preface.pdf" ]]
      then
         CREATIVECOMMONS="notfound"
-        echo "PDF file $f seems to have no readable text included but only binary data"
+        echo "PDF file $f seems seems to lack the proper copyright clauses on page 1"
      fi
   fi
 done
 if [[ $CREATIVECOMMONS == "notfound" ]] ; then
-  echo " ===> Make sure that paper PDFs have readable/selectable text in them "
+  echo " ===> Make sure that paper PDFs have the correct copyright clause, see https://ceur-ws.org/HOWTOSUBMIT.html#CCBY-FOOTNOTE"
+  echo " "
+else
+  echo "ok"
+  echo " "
+fi
+
+echo ""
+echo "(*) Use of CEUR-WS.org link before watermarking"
+CEURWSLINKFOUND="notfound"
+for f in *.pdf
+do
+  # PDF files should not have the string "(CEUR-WS.org)" on the first two pages
+  ${PDF2TXT} -m 2 $f | grep '(CEUR-WS.org)' 2>&1 > /dev/null
+  if [[ $? == 0 ]];
+  then
+     CEURWSLINKFOUND="found"
+     echo "PDF file $f has an old footnote with 'CEUR-WS.org' on it before watermarking"
+  fi
+done
+if [[ $CEURWSLINKFOUND == "found" ]] ; then
+  echo " ===> Use the latest CEURART template from https://ceur-ws.org/Vol-XXX/, which does not have a footnote pointing to CEUR-WS.org  "
+  echo " "
+else
+  echo "ok"
   echo " "
 fi
 
 
-
-echo "Checking for Non-Libertinus font in paper PDFs ..."
+echo ""
+echo "(*) Libertinus font in paper PDFs"
 NONLIBERTINUSFOUND="no"
 for f in *.pdf
 do
   # Files created with Windows Word/LibreOfffice apparently use CIDFont+F instead Libertinus as font name (?)
+  # We use two methods for Libertinus detection. First, 'strings | grep FontName' extracts it if it is used as a PDF
+  # command. Second, pdffonts is used when the fonts are embedded differently. 
   strings $f | grep FontName | grep -q -E 'Libertinus|CIDFont.F5'
   if [[ $? != 0 ]];
   then
      if [[ "$f" != "xpreface.pdf" && "$f" != "preface.pdf" && "$f" != "Preface.pdf" ]]
      then
-       NONLIBERTINUSFOUND="found"
-       echo "PDF file $f does not use Libertinus font family"
+       pdffonts 2> /dev/null $f | grep -q -E 'Libertinus|CIDFont.F5'
+       if [[ $? != 0 ]];
+       then
+          NONLIBERTINUSFOUND="found"
+          echo "PDF file $f does not use Libertinus font family"
+       fi
      fi
   fi
 done
 if [[ $NONLIBERTINUSFOUND == "found" ]] ; then
-  echo " ===> Make sure that paper PDFs use the Libertinus font family; this only applies to papers PDFs, prefaces that have no paper character do not necessarily need to use Libertinus"
+  echo " ===> Make sure that paper PDFs use the Libertinus font family; instructions to install Libertinus fonts are included in https://ceur-ws.org/Vol-XXX/CEUR-Template-1col.pdf; paper PDFs should all use Libertinus fonts, prefaces that have no paper character do not necessarily need to use Libertinus"
+  echo " "
+else
+  echo "ok"
+  echo " "
 fi
 
-echo "Checking for duplicate PDF files ..."
+echo ""
+echo "(*) Duplicate PDF files"
 DUPPDFSFILES=`find . -name '*.pdf' ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD`
 if [ "$DUPPDFSFILES" != "" ]
 then echo " ";
      echo " ==========> ERROR (P2) with duplicate PDF files!!!!"
      find . -name '*.pdf' ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD
+  echo " "
+else
+  echo "ok"
+  echo " "
+
 fi
+
+
 
 
