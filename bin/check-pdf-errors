@@ -4,7 +4,7 @@
 # (c) 2024 by Manfred Jeusfeld. This script is made available under the
 # Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
 #
-# Manfred 2024-08-17 (2024-12-02)
+# Manfred 2024-08-17 (2024-12-23)
 
 which pdf2txt 2>&1 > /dev/null ; ec_pdf2txt=$?
 which pdf2txt.py 2>&1 > /dev/null ; ec_pdf2txtpy=$?
@@ -27,10 +27,10 @@ ABSTRACTWORD="found"
 for f in *.pdf
 do
   # PDF files should have the string "Abstract" on the first two pages (normally page 1)
-  ${PDF2TXT} -m 2 $f | grep -E 'Abstract|Copyright' 2>&1 > /dev/null
+  ${PDF2TXT} -m 2 "$f" | grep -E 'Abstract|Copyright' 2>&1 > /dev/null
   if [[ $? != 0 ]];
   then
-     if [[ "$f" != "xpreface.pdf" && "$f" != "preface.pdf" && "$f" != "Preface.pdf" ]]
+     if [[ "$f" != *"reface.pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" ]]
      then
         ABSTRACTWORD="notfound"
         echo "PDF file $f seems to have no readable text included but only binary data"
@@ -52,13 +52,13 @@ CREATIVECOMMONS="found"
 for f in *.pdf
 do
   # PDF files should have the string "Creative Commons License" on the first two pages
-  ${PDF2TXT} -m 2 $f | grep -E 'Creative.*Commons.*License|Commons.*License.*Attribution' 2>&1 > /dev/null
+  ${PDF2TXT} -m 2 "$f" | grep -E 'Creative.*Commons.*License|Commons.*License.*Attribution' 2>&1 > /dev/null
   if [[ $? != 0 ]];
   then
-     if [[ "$f" != "xpreface.pdf" && "$f" != "preface.pdf" && "$f" != "Preface.pdf" ]]
+     if [[ "$f" != *"reface.pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" ]]
      then
         CREATIVECOMMONS="notfound"
-        echo "PDF file $f seems seems to lack the proper copyright clauses on page 1"
+        echo "PDF file $f seems to lack the proper copyright clauses on page 1"
      fi
   fi
 done
@@ -71,12 +71,12 @@ else
 fi
 
 echo ""
-echo "(*) Use of CEUR-WS.org link before watermarking"
+echo "(*) Use of CEUR-WS.org logo or link before watermarking"
 CEURWSLINKFOUND="notfound"
 for f in *.pdf
 do
   # PDF files should not have the string "(CEUR-WS.org)" on the first two pages
-  ${PDF2TXT} -m 2 $f | grep '(CEUR-WS.org)' 2>&1 > /dev/null
+  ${PDF2TXT} -m 2 "$f" | grep '(CEUR-WS.org)' 2>&1 > /dev/null
   if [[ $? == 0 ]];
   then
      CEURWSLINKFOUND="found"
@@ -84,7 +84,7 @@ do
   fi
 done
 if [[ $CEURWSLINKFOUND == "found" ]] ; then
-  echo " ===> Use the latest CEURART template from https://ceur-ws.org/Vol-XXX/, which does not have a footnote pointing to CEUR-WS.org  "
+  echo " ===> Use the latest CEURART template from https://ceur-ws.org/Vol-XXX/, which does not have a footnote with the CEUR-WS logo"
   echo " "
 else
   echo "ok"
@@ -100,10 +100,10 @@ do
   # Files created with Windows Word/LibreOfffice apparently use CIDFont+F instead Libertinus as font name (?)
   # We use two methods for Libertinus detection. First, 'strings | grep FontName' extracts it if it is used as a PDF
   # command. Second, pdffonts is used when the fonts are embedded differently. 
-  strings $f | grep FontName | grep -q -E 'Libertinus|CIDFont.F5'
+  strings "$f" | grep FontName | grep -q -E 'Libertinus|CIDFont.F5'
   if [[ $? != 0 ]];
   then
-     if [[ "$f" != "xpreface.pdf" && "$f" != "preface.pdf" && "$f" != "Preface.pdf" ]]
+     if [[ "$f" != *"reface.pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" ]]
      then
        pdffonts 2> /dev/null $f | grep -q -E 'Libertinus|CIDFont.F5'
        if [[ $? != 0 ]];

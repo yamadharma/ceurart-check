@@ -223,7 +223,7 @@ do
   then echo " ";
        echo " ==========> ERROR (A27) in index.html!!!!";
        echo "$KEYWORD ends with a '.'. It should be just a label not ending with a dot.";
-       grep -n -P $KEYWORD index.html | grep -v 'Jr.' | grep  '\.</span>'
+       grep -n -P $KEYWORD index.html |  -v 'Jr.' | grep  '\.</span>'
   fi
 done
 
