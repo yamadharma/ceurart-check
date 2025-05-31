@@ -4,7 +4,7 @@
 # (c) 2020-2024 by Manfred Jeusfeld. This script is made available under the
 # Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
 #
-# Manfred 2020-03-20 (2024-10-24)
+# Manfred 2020-03-20 (2025-02-05)
 
 if [ -f index.html.orig ]; then
     echo "Using check-index-errors-after ... "
@@ -128,7 +128,7 @@ then echo " ";
      echo "index.html contains absolute path http//ceur-ws.org/ceur-ws.css; must be ../ceur-ws.css";
 fi
 
-for KEYWORD in CEURVERSION CEURVOLTITLE CEURFULLTITLE CEURURN CEURCOLOCATED CEURPUBYEAR CEURVOLACRONYM CEURTOC CEURLOCTIME CEURPUBDATE CEURVOLNR
+for KEYWORD in CEURVERSION CEURVOLTITLE CEURFULLTITLE CEURURN CEURPUBYEAR CEURVOLACRONYM CEURTOC CEURLOCTIME CEURPUBDATE CEURVOLNR
 do
   NRWORDS=`grep -wc $KEYWORD index.html`
   if [ "$NRWORDS" -ne "1" ]
@@ -138,6 +138,18 @@ do
     grep $KEYWORD index.html
   fi
 done
+
+for KEYWORD in CEURCOLOCATED
+do
+  NRWORDS=`grep -wc $KEYWORD index.html`
+  if [ "$NRWORDS" -gt "1" ]
+  then 
+    echo " ==========> ERROR (A17a) in index.html!!!!";
+    echo "The label $KEYWORD must have exactly one value in index.html. It your case, the value is $NRWORDS."
+    grep $KEYWORD index.html
+  fi
+done
+
 
 for KEYWORD in CEURVOLEDITOR
 do
@@ -223,7 +235,7 @@ do
   then echo " ";
        echo " ==========> ERROR (A27) in index.html!!!!";
        echo "$KEYWORD ends with a '.'. It should be just a label not ending with a dot.";
-       grep -n -P $KEYWORD index.html |  -v 'Jr.' | grep  '\.</span>'
+       grep -n -P $KEYWORD index.html |  grep -v 'Jr.' | grep  '\.</span>'
   fi
 done
 

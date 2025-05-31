@@ -4,10 +4,12 @@
 # (c) 2024 by Manfred Jeusfeld. This script is made available under the
 # Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
 #
-# Manfred 2024-08-17 (2024-12-23)
+# Manfred 2024-08-17 (2025-05-30)
 
-which pdf2txt 2>&1 > /dev/null ; ec_pdf2txt=$?
-which pdf2txt.py 2>&1 > /dev/null ; ec_pdf2txtpy=$?
+### Find pdf2txt implementation
+
+which pdf2txt > /dev/null 2>&1 ; ec_pdf2txt=$?
+which pdf2txt.py > /dev/null 2>&1 ; ec_pdf2txtpy=$?
 
 if [[ ${ec_pdf2txt} == 0 ]]
 then
@@ -20,6 +22,8 @@ else
     echo "PDF2TXT =" $PDF2TXT
     exit
 fi
+
+### Code:
 
 echo ""
 echo "(*) Readable/Selectable text inside PDF files"
@@ -70,6 +74,30 @@ else
   echo " "
 fi
 
+
+echo "(*) Declaration on Generative AI"
+GENAIDECL="found"
+for f in *.pdf
+do
+  # PDF files should have the string "Creative Commons License" on the first two pages
+  ${PDF2TXT} "$f" | grep -E 'Declaration on Generative AI' 2>&1 > /dev/null
+  if [[ $? != 0 ]];
+  then
+     if [[ "$f" != *"reface.pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" && "$f" != *"bstract"*".pdf" ]]
+     then
+        GENAIDECL="notfound"
+        echo "PDF file $f seems to lack a statement Declaration on Generative AI"
+     fi
+  fi
+done
+if [[ $GENAIDECL == "notfound" ]] ; then
+  echo " ===> Make sure that paper PDFs have a Generative AI Declaration conforming https://ceur-ws.org/GenAI/Policy.html"
+  echo " "
+else
+  echo "ok"
+  echo " "
+fi
+
 echo ""
 echo "(*) Use of CEUR-WS.org logo or link before watermarking"
 CEURWSLINKFOUND="notfound"
@@ -99,7 +127,7 @@ for f in *.pdf
 do
   # Files created with Windows Word/LibreOfffice apparently use CIDFont+F instead Libertinus as font name (?)
   # We use two methods for Libertinus detection. First, 'strings | grep FontName' extracts it if it is used as a PDF
-  # command. Second, pdffonts is used when the fonts are embedded differently. 
+  # command. Second, pdffonts is used when the fonts are embedded differently.
   strings "$f" | grep FontName | grep -q -E 'Libertinus|CIDFont.F5'
   if [[ $? != 0 ]];
   then
@@ -115,7 +143,7 @@ do
   fi
 done
 if [[ $NONLIBERTINUSFOUND == "found" ]] ; then
-  echo " ===> Make sure that paper PDFs use the Libertinus font family; instructions to install Libertinus fonts are included in https://ceur-ws.org/Vol-XXX/CEUR-Template-1col.pdf; paper PDFs should all use Libertinus fonts, prefaces that have no paper character do not necessarily need to use Libertinus"
+  echo " ===> Make sure that paper PDFs use the Libertinus font family; instructions to install Libertinus fonts are included in https://ceur-ws.org/Vol-XXX/CEUR-Template-1col.odt; paper PDFs should all use Libertinus fonts, prefaces that have no paper character do not necessarily need to use Libertinus; do not use Word/MS365 but rather use LibreOffice and its PDF exporter"
   echo " "
 else
   echo "ok"
@@ -135,7 +163,3 @@ else
   echo " "
 
 fi
-
-
-
-

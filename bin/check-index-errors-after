@@ -6,7 +6,7 @@
 #
 # check-index-errors-after is like check-index-errors but checks whether some editings are missing
 #
-# Manfred 2020-03-20 (2024-06-09)
+# Manfred 2020-03-20 (2025-02-05)
 
 # to distinguish regular index files for "semantified" index files
 indexformat=regular
@@ -194,12 +194,23 @@ then echo " ";
      echo "index.html contains absolute path http//ceur-ws.org/ceur-ws.css; must be ../ceur-ws.css";
 fi
 
-for KEYWORD in CEURVERSION CEURVOLTITLE CEURFULLTITLE CEURURN CEURCOLOCATED CEURPUBYEAR CEURVOLACRONYM CEURTOC CEURLOCTIME CEURPUBDATE CEURVOLNR
+for KEYWORD in CEURVERSION CEURVOLTITLE CEURFULLTITLE CEURURN CEURPUBYEAR CEURVOLACRONYM CEURTOC CEURLOCTIME CEURPUBDATE CEURVOLNR
 do
   NRWORDS=`grep -wc $KEYWORD index.html`
   if [ "$NRWORDS" -ne "1" ]
   then 
     echo " ==========> ERROR (25) in index.html!!!!";
+    echo "The label $KEYWORD must have exactly one value in index.html. It your case, the value is $NRWORDS."
+    grep $KEYWORD index.html
+  fi
+done
+
+for KEYWORD in CEURCOLOCATED
+do
+  NRWORDS=`grep -wc $KEYWORD index.html`
+  if [ "$NRWORDS" -gt "1" ]
+  then 
+    echo " ==========> ERROR (25a) in index.html!!!!";
     echo "The label $KEYWORD must have exactly one value in index.html. It your case, the value is $NRWORDS."
     grep $KEYWORD index.html
   fi
@@ -290,7 +301,7 @@ done
 grep -q  "<body>" index.html
 if [[ $? != 0 ]];
 then echo " ";
-     echo " ==========> ERROR (E35) in index.html!!!!";
+     echo " ==========> ERROR (35) in index.html!!!!";
      echo "The index.html file must contain the tag <body> without any parameters.";
 fi
 
@@ -299,7 +310,7 @@ fi
 grep "CEURPUBDATE" index.html |  grep -q `date +"%Y"` 
 if [[ $? != 0 ]];
 then echo " ";
-     echo " ==========> ERROR (36) in index.html!!!!";
+     echo " ==========> Warning (36) in index.html!!!!";
      echo "Warning: The CEURPUBDATE at the end of the index.html file does not contain the current year. This is ok if changes were made in the year after the publication of the volume.";
 fi
 
