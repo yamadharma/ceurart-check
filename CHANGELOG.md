@@ -1,3 +1,17 @@
+# [1.1.0](https://github.com/yamadharma/ceurart-check/compare/v1.0.2...v1.1.0) (2025-05-31)
+
+
+### Bug Fixes
+
+* **script:** sync with ceur-ws working directory ([4bc0b5f](https://github.com/yamadharma/ceurart-check/commit/4bc0b5fe4a0c1e7bbc43f4a21766c02ed10967cd))
+
+
+### Features
+
+* **check-pdf:** add check for Declaration on Generative AI ([76b45c8](https://github.com/yamadharma/ceurart-check/commit/76b45c8f0a7a63130e2217bfc755e53faa343e69))
+
+
+
 ## [1.0.2](https://github.com/yamadharma/ceurart-check/compare/v1.0.1...v1.0.2) (2024-12-17)
 
 
