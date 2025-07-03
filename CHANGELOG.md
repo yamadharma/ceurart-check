@@ -1,3 +1,12 @@
+## [1.1.1](https://github.com/yamadharma/ceurart-check/compare/v1.1.0...v1.1.1) (2025-07-03)
+
+
+### Bug Fixes
+
+* **script:** update from ceur-ws ([f7462c5](https://github.com/yamadharma/ceurart-check/commit/f7462c5c58c68264b42c7b38413d38f9160fa67d))
+
+
+
 # [1.1.0](https://github.com/yamadharma/ceurart-check/compare/v1.0.2...v1.1.0) (2025-05-31)
 
 
