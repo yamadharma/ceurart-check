@@ -1,10 +1,26 @@
 #!/bin/bash
-# 
-# Check wether the index.html file i a volume has some common errors
-# (c) 2020-2024 by Manfred Jeusfeld. This script is made available under the
+#
+# File: check-index-errors
+# Version: 0.9
+#
+# Check whether the index.html file in a volume has some common errors
+# (c) 2020-2025 by Manfred Jeusfeld. This script is made available under the
 # Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
 #
-# Manfred 2020-03-20 (2025-02-05)
+# The BASH script is part of the scripts used for CEUR-WS.org. No warrantee whatsoever. No support. 
+#
+# Note that this script is updated on a regular basis, in particular to cover changes with
+# the layout for index files ceur-ws.org/Vol-XXX/index.html.
+#
+# Call this script in the directory that contains the index.html file that you want to check.
+#
+# Manfred 2020-03-20 (2025-07-02)
+#
+
+if [ ! -f index.html ]; then
+    echo "No file index.html in this directory. Call this script in the directory that contains your submissions files."
+    exit 1
+fi
 
 if [ -f index.html.orig ]; then
     echo "Using check-index-errors-after ... "
@@ -253,4 +269,43 @@ then echo " ";
      echo " ==========> ERROR (A29) in index.html!!!!";
      echo "The index.html file must contain the tag <body> without any parameters.";
 fi
+
+ALLPDFSLINKED="yes"
+for f in *.pdf
+do
+  # All PDF files must be linked in index.html
+  grep -q "$f" index.html
+  if [[ $? != 0 ]];
+  then
+    ALLPDFSLINKED="unlinkedpdffound"
+    echo "PDF file $f is not linked in index.html"
+  fi
+done
+
+if [[ $ALLPDFSLINKED == "unlinkedpdffound" ]] ; then
+  echo " ==========> ERROR (A30) in index.html!!!!";
+  echo "Make sure all paper PDFs are linked in index.html"
+  echo " "
+fi
+
+
+# All links to PDF files in index.html must point to a file in the same directory
+pdf_links=$(grep -o 'href="[^"]*\.pdf"' index.html | sed 's/href="//' | sed 's/"$//')
+ALLPDFSEXISTS="yes"
+for f in $pdf_links
+do
+  if [[ $f != http* ]]  && [[ ! -f "$f" ]]; then
+    echo "File $f referenced in index.html does not exist in the same directory"
+    ALLPDFSEXISTS="no"
+  fi
+done
+
+if [[ $ALLPDFSEXISTS == "no" ]] ; then
+  echo " ==========> ERROR (A31) in index.html!!!!";
+  echo "Make sure all refernces to paper PDFs in index.html also exist as file in the same directory"
+  echo " "
+fi
+
+
+
 

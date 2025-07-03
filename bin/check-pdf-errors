@@ -1,10 +1,24 @@
 #!/bin/bash
 #
-# Check whether the PDF files use Libertinus fonts and do not have other problems
-# (c) 2024 by Manfred Jeusfeld. This script is made available under the
+# File: check-pdf-errors
+# Version: 0.9
+#
+# Checks whether the PDF files in the current directory have issues in matching the CEURART style.
+# (C) 2024-2025 by Manfred Jeusfeld. This script is made available under the
 # Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
 #
-# Manfred 2024-08-17 (2025-05-30)
+# The BASH script is part of the scripts used for CEUR-WS.org. No warrantee whatsoever. No support.
+#
+# Requires the installation of certain packages, in particular pdf2txt and pdffonts. The tool pdf2txt is part of the
+# package python-pdfminer. The pdffonts command is paper of the packacge poppler-utils.
+#
+# Note that this script is updated on a regular basis, in particular to cover changes with
+# the CEURART layout for papers. See ceur-ws.org/Vol-XXX/ for the CEURART specification.
+#
+# Call this script in the directory that contains the PDF files that you want to check.
+#
+# Manfred 2024-08-17 (2025-06-14)
+#
 
 ### Find pdf2txt implementation
 
@@ -25,16 +39,22 @@ fi
 
 ### Code:
 
+if [[ ! `ls *.pdf` ]]; then
+    echo "No file with filetype *.pdf in this directory."
+    exit 1
+fi
+
+
 echo ""
 echo "(*) Readable/Selectable text inside PDF files"
 ABSTRACTWORD="found"
 for f in *.pdf
 do
-  # PDF files should have the string "Abstract" on the first two pages (normally page 1)
+  # PDF files should have the computer-readable string "Abstract" or "Copyright" on the first two pages (normally page 1)
   ${PDF2TXT} -m 2 "$f" | grep -E 'Abstract|Copyright' 2>&1 > /dev/null
   if [[ $? != 0 ]];
   then
-     if [[ "$f" != *"reface.pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" ]]
+     if [[ "$f" != *"reface"*".pdf" && "$f" != *"rganization.pdf" && "$f" != *"ponsors.pdf" && "$f" != *"ommittee"*".pdf" ]]
      then
         ABSTRACTWORD="notfound"
         echo "PDF file $f seems to have no readable text included but only binary data"
@@ -55,19 +75,22 @@ echo "(*) CEUR-WS standard copyright phrase"
 CREATIVECOMMONS="found"
 for f in *.pdf
 do
-  # PDF files should have the string "Creative Commons License" on the first two pages
-  ${PDF2TXT} -m 2 "$f" | grep -E 'Creative.*Commons.*License|Commons.*License.*Attribution' 2>&1 > /dev/null
+  # PDF files should have the string "Creative Commons License" on the first two pages; copyright year may not be 2022 or 2023
+  # left unmodified by the author when using the CEURART template
+#  ${PDF2TXT} -m 2 "$f" | grep -E 'Creative.*Commons.*License|Commons.*License.*Attribution' 2>&1 > /dev/null
+  ${PDF2TXT} -m 2 "$f" | grep -E 'Creative.*Commons.*License|Commons.*License.*Attribution' | grep -Ev '2022|2023' 2>&1 > /dev/null
   if [[ $? != 0 ]];
   then
-     if [[ "$f" != *"reface.pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" ]]
+     if [[ "$f" != *"reface"*".pdf" && "$f" != *"rganization.pdf" && "$f" != *"ponsors.pdf" && "$f" != *"ommittee"*".pdf" ]]
      then
         CREATIVECOMMONS="notfound"
-        echo "PDF file $f seems to lack the proper copyright clauses on page 1"
+        echo "PDF file $f seems to lack the proper copyright clause or copyright year on page 1"
      fi
   fi
 done
 if [[ $CREATIVECOMMONS == "notfound" ]] ; then
   echo " ===> Make sure that paper PDFs have the correct copyright clause, see https://ceur-ws.org/HOWTOSUBMIT.html#CCBY-FOOTNOTE"
+  echo " ===> Make sure that paper PDFs have the correct *year* in the copyright clause!"
   echo " "
 else
   echo "ok"
@@ -83,7 +106,7 @@ do
   ${PDF2TXT} "$f" | grep -E 'Declaration on Generative AI' 2>&1 > /dev/null
   if [[ $? != 0 ]];
   then
-     if [[ "$f" != *"reface.pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" && "$f" != *"bstract"*".pdf" ]]
+     if [[ "$f" != *"reface"*".pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" && "$f" != *"bstract"*".pdf"  && "$f" != *"ommittee"*".pdf" ]]
      then
         GENAIDECL="notfound"
         echo "PDF file $f seems to lack a statement Declaration on Generative AI"
@@ -108,7 +131,7 @@ do
   if [[ $? == 0 ]];
   then
      CEURWSLINKFOUND="found"
-     echo "PDF file $f has an old footnote with 'CEUR-WS.org' on it before watermarking"
+     echo "PDF file $f has an old footnote with 'CEUR-WS.org' on it before watermarking or uses the string (CEUR-WS.org)"
   fi
 done
 if [[ $CEURWSLINKFOUND == "found" ]] ; then
@@ -131,7 +154,7 @@ do
   strings "$f" | grep FontName | grep -q -E 'Libertinus|CIDFont.F5'
   if [[ $? != 0 ]];
   then
-     if [[ "$f" != *"reface.pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf" ]]
+     if [[ "$f" != *"reface"*".pdf" && "$f" != *"rganization.pdf" &&"$f" != *"ponsors.pdf"  && "$f" != *"ommittee"*".pdf" ]]
      then
        pdffonts 2> /dev/null $f | grep -q -E 'Libertinus|CIDFont.F5'
        if [[ $? != 0 ]];
