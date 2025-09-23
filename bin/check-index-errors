@@ -14,7 +14,7 @@
 #
 # Call this script in the directory that contains the index.html file that you want to check.
 #
-# Manfred 2020-03-20 (2025-07-02)
+# Manfred 2020-03-20 (2025-09-22)
 #
 
 if [ ! -f index.html ]; then
@@ -47,10 +47,10 @@ then echo " ";
      echo "String 'OPub' found in index.html";
 fi
 
-if grep -q "Coeditor," index.html;
+if grep -q -E "Coeditor|Carlos Nombre|Anne Foé" index.html;
 then echo " ";
      echo " ==========> ERROR (A3) in index.html!!!!";
-     echo "String 'Coeditor' found in the footer of index.html";
+     echo "String 'Coeditor' or 'Carlos Nombre' or 'Anne Foé' left over from template Vol-XXX found in index.html";
 fi
 
 if grep -q "<li>" index.html;
@@ -174,6 +174,7 @@ do
   then 
     echo " ==========> ERROR (A18) in index.html!!!!";
     echo "The label $KEYWORD must have at least one value in index.html. It your case, the value is $NRWORDS."
+    echo " ";
   fi
 done
 
@@ -183,6 +184,7 @@ if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A19) in index.html!!!!";
      echo "The validator link at the end of index.html must initially include the parameter 'Vol-XXX'. Otherwise, our scripts cannot insert the right volume number here!";
+     echo " ";
 fi
 
 
@@ -197,7 +199,8 @@ if grep CEURAUTHOR index.html | grep -q " and";
 then echo " ";
      echo " ==========> ERROR (A21) in index.html!!!!";
      echo "index.html contains CEURAUTHOR elements using 'and' as separator instead ','.";
-       grep -n -P 'CEURAUTHOR.*</span>, and' index.html
+     grep -n -P 'CEURAUTHOR.*</span>, and' index.html;
+     echo " ";
 fi
 
 # extract certain CEUR fields from the index.html file
@@ -219,7 +222,7 @@ then echo " ";
      echo $DUPPDFS
 fi
 
-DUPTITLES=`grep "CEURTITLE" index.html | sed "s/<a href/\\n<a href/g" | sed 's/\"/\"><\/a>\n/2' | grep href | sort | uniq --count | grep -v "1 <a"`
+DUPTITLES=`grep "CEURTITLE" index.html | sed "s/<a href/\\n<a href/g" | sed 's/\"/\"><\/a>\n/2' | grep href | sort | uniq --count | grep -Ev "^[[:space:]]*1 "`
 if [ "$DUPTITLES" != "" ]
 then echo " ";
      echo " ==========> ERROR (A24) in index.html!!!!";
@@ -270,22 +273,23 @@ then echo " ";
      echo "The index.html file must contain the tag <body> without any parameters.";
 fi
 
+
 ALLPDFSLINKED="yes"
 for f in *.pdf
 do
   # All PDF files must be linked in index.html
-  grep -q "$f" index.html
+  grep -q ""$f"" index.html
   if [[ $? != 0 ]];
   then
-    ALLPDFSLINKED="unlinkedpdffound"
-    echo "PDF file $f is not linked in index.html"
+    ALLPDFSLINKED="unlinkedpdffound";
+    echo "PDF file $f is not linked in index.html";
   fi
 done
 
 if [[ $ALLPDFSLINKED == "unlinkedpdffound" ]] ; then
   echo " ==========> ERROR (A30) in index.html!!!!";
-  echo "Make sure all paper PDFs are linked in index.html"
-  echo " "
+  echo "Make sure all paper PDFs are linked in index.html";
+  echo " ";
 fi
 
 
@@ -302,10 +306,52 @@ done
 
 if [[ $ALLPDFSEXISTS == "no" ]] ; then
   echo " ==========> ERROR (A31) in index.html!!!!";
-  echo "Make sure all refernces to paper PDFs in index.html also exist as file in the same directory"
+  echo "Make sure all references to paper PDFs in index.html also exist as file in the same directory"
   echo " "
 fi
 
+
+# A PDF file should be referenced only once in index.html
+DUPCOUNTRESULT=`grep -o '"[[:alnum:]_-]\+\.pdf"' index.html | sed 's/<[^>]*>//g' | tr -s '[:space:]' '\n' | grep -v '^$' | sort | uniq -c | awk '$1 > 1'`
+if [[ "$DUPCOUNTRESULT" != "" ]];
+then echo " ";
+     echo " ==========> ERROR (A32) in index.html!!!!";
+     echo "The index.html file has multiple references to the same PDF file.";
+fi
+
+if grep -q "<script" index.html;
+then echo " ";
+     echo " ==========> ERROR (A33) in index.html!!!!";
+     echo "Script keyword found in index.html; we do not allow JavaScript on our pages";
+fi
+
+if grep -q "http://" index.html;
+then echo " ";
+     echo " ==========> ERROR (A34) in index.html!!!!";
+     echo "Change occurrences of 'http://' to 'https://' since http is being phased out";
+fi
+
+if grep -q "0000-0000-0000-0000" index.html;
+then echo " ";
+     echo " ==========> ERROR (A35) in index.html!!!!";
+     echo "The index.html file has a dummy ORCID 0000-0000-0000-0000. Either correct or remove the tags itemcope itemtype and itemid";
+fi
+
+grep -q  "0074-XXX-C" index.html
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (A36) in index.html!!!!";
+     echo "Do not change the URN template from Vol-XXX in the submission index.html file; we shall assign the URN automatically";
+     echo " ";
+fi
+
+grep -q  "\"CEURVOLNR\">Vol-XXX" index.html
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (A37) in index.html!!!!";
+     echo "Do not change the volume number Vol-XXX in the submission index.html file; we shall assign it automatically";
+     echo " ";
+fi
 
 
 
