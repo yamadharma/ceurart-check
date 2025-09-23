@@ -1,3 +1,13 @@
+# [1.2.0](https://github.com/yamadharma/ceurart-check/compare/v1.1.1...v1.2.0) (2025-09-23)
+
+
+### Features
+
+* **script:** add new script ceur-add-pagenum ([479d8b8](https://github.com/yamadharma/ceurart-check/commit/479d8b87f8ea91a08f642f8affd8b4425a73e43e))
+* **script:** update scripts from ceur ([08d3151](https://github.com/yamadharma/ceurart-check/commit/08d31515a70afd6958c81a6ff375d6aa892a6645))
+
+
+
 ## [1.1.1](https://github.com/yamadharma/ceurart-check/compare/v1.1.0...v1.1.1) (2025-07-03)
 
 
