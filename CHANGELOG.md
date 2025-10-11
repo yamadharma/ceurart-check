@@ -1,3 +1,18 @@
+## [1.2.1](https://github.com/yamadharma/ceurart-check/compare/v1.2.0...v1.2.1) (2025-10-11)
+
+
+### Bug Fixes
+
+* **script:** update library name ([7eafa59](https://github.com/yamadharma/ceurart-check/commit/7eafa59ad0c650d0c368f5dcb574911360df1eae))
+
+
+### Features
+
+* **script:** remove characters-per-paper ([5a56bed](https://github.com/yamadharma/ceurart-check/commit/5a56bed4ec8692ffc980044082f8e66767e499ef))
+* **script:** update versions ([61472bf](https://github.com/yamadharma/ceurart-check/commit/61472bfd9dc3d22a7a6642803e662df4cbe0cd30))
+
+
+
 # [1.2.0](https://github.com/yamadharma/ceurart-check/compare/v1.1.1...v1.2.0) (2025-09-23)
 
 
