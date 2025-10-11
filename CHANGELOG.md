@@ -1,3 +1,12 @@
+## [1.2.3](https://github.com/yamadharma/ceurart-check/compare/v1.2.2...v1.2.3) (2025-10-11)
+
+
+### Bug Fixes
+
+* **readme:** update readme ([c4d4591](https://github.com/yamadharma/ceurart-check/commit/c4d45919678bef20e4fde793949f8ddcffea1b23))
+
+
+
 ## [1.2.2](https://github.com/yamadharma/ceurart-check/compare/v1.2.1...v1.2.2) (2025-10-11)
 
 
