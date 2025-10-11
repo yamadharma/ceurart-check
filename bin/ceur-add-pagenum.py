@@ -11,7 +11,8 @@ import sys
 import textwrap
 
 from lxml import html
-from PyPDF2 import PdfFileReader
+# from PyPDF2 import PdfFileReader
+from pypdf import PdfReader
 
 if len(sys.argv) > 2 or sys.argv[1] == "-h":
     MSG = """\
