@@ -20,7 +20,7 @@
 #
 # Call this script in the directory that contains the PDF files that you want to check.
 #
-# Manfred 2024-08-17 (2025-09-19)
+# Manfred 2024-08-17 (2025-10-08)
 #
 
 ### Find pdf2txt implementation
@@ -115,7 +115,7 @@ do
 #  pdftotext "$f" "$temp_file"
   ${PDF2TXT} "$f" > "$temp_file"
   # Test 1: PDF files should have a section "Declaration on Generative AI"
-  cat "$temp_file" | grep -E 'Declaration .. [G|g]enerative AI' 2>&1 > /dev/null
+  cat "$temp_file" | grep -E 'Declaration .. [G|g]enerative AI|[G|g]enerative AI *[D|d]eclaration' 2>&1 > /dev/null
   if [[ $? != 0 ]];
   then
      GENAIDECL="notok"
@@ -152,6 +152,15 @@ echo "(*) Use of CEUR-WS.org logo or link or string CEUR Workshop Proceedings be
 CEURWSLINKFOUND="notfound"
 for f in *.pdf
 do
+  if [ -f watermark-log.txt ]; then
+    if grep -q "$f" watermark-log.txt; then
+      continue;
+    fi
+  fi
+  if [[ "$f" == *"reface"*".pdf" || "$f" == *"rganization.pdf" || "$f" == *"ponsors.pdf" || "$f" == *"bstract"*".pdf"  || "$f" == *"ommittee"*".pdf" || "$f" == *"matter"*".pdf" ]]
+  then
+     continue
+  fi
   # PDF files should not have the string "(CEUR-WS.org)" on the first two pages
   ${PDF2TXT} -m 2 "$f" | grep -E '(CEUR-WS.org)|CEUR Workshop Proceedings' 2>&1 > /dev/null
   if [[ $? == 0 ]];
@@ -233,3 +242,29 @@ else
   echo "ok"
   echo " "
 fi
+
+# disabled for now
+#echo ""
+#echo "(*) Check on one-column style"
+#ALLONECOLUMN="yes"
+#for f in *.pdf
+#do
+#  if [[ "$f" == *"reface"*".pdf" || "$f" == *"rganization.pdf" || "$f" == *"ponsors.pdf" || "$f" == *"bstract"*".pdf"  || "$f" == *"ommittee"*".pdf" || "$f" == *"matter"*".pdf" ]]
+#  then
+#     continue
+#  fi
+  # PDF files should not have leftover elements from the CEURART template in the footer
+#  check-columns "$f"  2>&1 > /dev/null
+#  if [[ $? != 0 ]];
+#  then
+#     ALLONECOLUMN="no"
+#     echo "PDF file $f seems to be in two-column format"
+#  fi
+#done
+#if [[ $ALLONECOLUMN == "no" ]] ; then
+#  echo " ===> Make sure that paper PDFs are in 1-column CEURART format, see https://ceur-ws.org/Vol-XXX/"
+#  echo " "
+#else
+#  echo "ok"
+#  echo " "
+#fi
