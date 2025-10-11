@@ -1,9 +1,3 @@
----
-author: Dmitry S. Kulyabov
-date: "2024-10-27T19:39:00+03:00"
-title: CEURART document verification
----
-
 # Table of Contents
 
 1.  [Key issues](#org9192900)
