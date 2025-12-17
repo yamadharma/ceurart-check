@@ -1,3 +1,12 @@
+## [1.2.4](https://github.com/yamadharma/ceurart-check/compare/v1.2.3...v1.2.4) (2025-12-17)
+
+
+### Features
+
+* **script:** update scripts ([efff094](https://github.com/yamadharma/ceurart-check/commit/efff094c9c701edd85c47e4479d379b606947a0b))
+
+
+
 ## [1.2.3](https://github.com/yamadharma/ceurart-check/compare/v1.2.2...v1.2.3) (2025-10-11)
 
 
