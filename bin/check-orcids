@@ -1,0 +1,103 @@
+#!/bin/bash
+#
+# File: check-orcids
+# Version: 0.1
+#
+# Checks whether the index.html file has valid ORCIDs
+# (C) 2025 by Manfred Jeusfeld. This script is made available under the
+# Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
+#
+# The BASH script is part of the scripts used for CEUR-WS.org. No warrantee whatsoever. No support. 
+#
+# May require the installation of certain packages.
+#
+# Note that this script is updated on a regular basis, in particular to cover changes with
+# the CEURART layout for papers. See ceur-ws.org/Vol-XXX/ for the CEURART specification.
+#
+# Call this script in the directory that contains the PDF files that you want to check.
+#
+# Manfred 2025-11-16 (2025-11-17)
+#
+
+
+if [ ! -f "index.html" ]; then
+    echo "No file index.html found for checking orcids."
+    exit 1
+fi
+
+
+echo "(*) Checking whether author names match their profile name on ORCID.org"
+ORCIDMISMATCH="no"
+
+# Function to normalize names: remove accents, lowercase, collapse spaces
+normalize() {
+    echo "$1" | iconv -f utf-8 -t ascii//TRANSLIT 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+# Loop over all CEUR authors/editors
+while read -r span; do
+    # Extract the author/editor name
+    name=$(echo "$span" | sed -E 's/.*>([^<]+)<\/span>/\1/' | sed 's/&[a-zA-Z0-9#]\+;/ /g')
+
+    # Extract the ORCID if present
+    orcid=$(echo "$span" | grep -oP 'itemid="https://orcid\.org/\K[0-9\-X]+')
+    [[ -z "$orcid" ]] && continue
+
+    # Query ORCID Public API
+    json=$(curl -s -H "Accept: application/json" "https://pub.orcid.org/v3.0/$orcid/person")
+
+    # Extract main given and family names
+    api_given=$(echo "$json" | grep -oP '"given-names":\s*\{"value":\s*"\K[^"]+')
+    api_family=$(echo "$json" | grep -oP '"family-name":\s*\{"value":\s*"\K[^"]+')
+    api_full="$api_given $api_family"
+
+    # Extract other-names / aliases
+    aliases=$(echo "$json" | grep -oP '"other-name":\s*\{"content":\s*"\K[^"]+' | tr '\n' ' ')
+
+    # Build array of all names to check
+    name_list=("$api_full")
+    for alias in $aliases; do
+        name_list+=("$alias")
+    done
+
+    # Normalize CEUR name
+    ceur_norm=$(normalize "$name")
+    match_found=0
+
+    # Check against all ORCID names
+    for n in "${name_list[@]}"; do
+        n_norm=$(normalize "$n")
+        n_words=($n_norm)
+        if [[ ${#n_words[@]} -ge 2 ]]; then
+            given=${n_words[0]}
+            family=${n_words[-1]}
+            if [[ "$ceur_norm" =~ $given ]] && [[ "$ceur_norm" =~ $family ]]; then
+                match_found=1
+                break
+            fi
+        fi
+    done
+
+    # Only output mismatches
+    if [[ $match_found -eq 0 ]]; then
+        ORCIDMISMATCH="yes"
+        echo "In index.html: $name → $orcid → On ORCID.org: $api_full (aliases: $aliases)"
+    fi
+
+done < <(grep -oP '<span class="CEUR(?:AUTHOR|VOLEDITOR)".*?>.*?</span>' index.html)
+
+
+if [[ "$ORCIDMISMATCH" == "yes" ]] ; then
+  echo " "
+  echo " ===> Make sure that the CEURAUTHOR names with ORCIDs match the profile name or its aliases on ORCID.org."
+  echo "      It may be that the CEURAUTHOR name in index.html has a spelling error, or the ORCID is false, or"
+  echo "      the name in the ORCID profile has a spelling error."
+  echo "      The profile should include suitable aliases ('also known as') of the author name. If a mismatch"
+  echo "      cannot be corrected, then remove the ORCID tags from the CEURAUTHOR element in index.html."
+  echo " "
+else
+  echo "ok"
+  echo " "
+fi
+
+
