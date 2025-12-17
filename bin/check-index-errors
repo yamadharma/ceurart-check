@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # File: check-index-errors
-# Version: 0.9
+# Version: 0.91
 #
 # Check whether the index.html file in a volume has some common errors
 # (c) 2020-2025 by Manfred Jeusfeld. This script is made available under the
@@ -14,7 +14,7 @@
 #
 # Call this script in the directory that contains the index.html file that you want to check.
 #
-# Manfred 2020-03-20 (2025-10-09)
+# Manfred 2020-03-20 (2025-12-07)
 #
 
 if [ ! -f index.html ]; then
@@ -28,6 +28,9 @@ if [ -f index.html.orig ]; then
     exit 0
 fi
 
+
+echo "check-index-errors V0.91 (2025-12-07) CC-BY-SA 4.0"
+echo ""
 
 # to distinguish regular index files for "semantified" index files
 indexformat=regular
@@ -90,7 +93,7 @@ file index.html | grep -q "UTF-16"
 if [[ $? == 0 ]];
 then echo " ";
      echo " ==========> ERROR (A9) in index.html!!!!";
-     echo "index.html not encoded in UTF-16; use iconv to convert to UTF-8";
+     echo "index.html should not be encoded in UTF-16; use iconv to convert to UTF-8";
 fi
 
 grep -q  "urn:nbn:de:0074" index.html
@@ -270,7 +273,7 @@ grep -q  "<body>" index.html
 if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A29) in index.html!!!!";
-     echo "The index.html file must contain the tag <body> without any parameters.";
+     echo "The index.html file must contain the tag 'body' without any parameters.";
 fi
 
 
@@ -352,6 +355,141 @@ then echo " ";
      echo "Do not change the volume number Vol-XXX in the submission index.html file; we shall assign it automatically";
      echo " ";
 fi
+
+
+# 2025-11-16: Check whether ORCIDs in index.html have matching authors names
+ORCIDSFOUND="true"
+grep -q  "itemid=\"https://orcid.org/" index.html
+if [[ $? != 0 ]];
+then ORCIDSFOUND="false"
+fi
+
+
+# Function to normalize names: remove accents, lowercase, collapse spaces
+normalize() {
+    echo "$1" | iconv -f utf-8 -t ascii//TRANSLIT 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+if [[ "$ORCIDSFOUND" == "true" ]]; then
+  echo "(*) Checking whether author names match their profile name on ORCID.org"
+  ORCIDMISMATCH="no"
+
+
+  # Loop over all CEUR authors/editors
+  while read -r span; do
+    # Extract the author/editor name
+    name=$(echo "$span" | sed -E 's/.*>([^<]+)<\/span>/\1/' | sed 's/&[a-zA-Z0-9#]\+;/ /g')
+
+    # Extract the ORCID if present
+    orcid=$(echo "$span" | grep -oP 'itemid="https://orcid\.org/\K[0-9\-X]+')
+    [[ -z "$orcid" ]] && continue
+
+    # Query ORCID Public API
+    json=$(curl -s -H "Accept: application/json" "https://pub.orcid.org/v3.0/$orcid/person")
+
+    # Extract main given and family names
+    api_given=$(echo "$json" | grep -oP '"given-names":\s*\{"value":\s*"\K[^"]+')
+    api_family=$(echo "$json" | grep -oP '"family-name":\s*\{"value":\s*"\K[^"]+')
+    api_full="$api_given $api_family"
+
+    # Extract other-names / aliases
+    aliases=$(echo "$json" | grep -oP '"other-name":\s*\{"content":\s*"\K[^"]+' | tr '\n' ' ')
+
+    # Build array of all names to check
+    name_list=("$api_full")
+    for alias in $aliases; do
+        name_list+=("$alias")
+    done
+
+    # Normalize CEUR name
+    ceur_norm=$(normalize "$name")
+    match_found=0
+
+    # Check against all ORCID names
+    for n in "${name_list[@]}"; do
+        n_norm=$(normalize "$n")
+        n_words=($n_norm)
+        if [[ ${#n_words[@]} -ge 2 ]]; then
+            given=${n_words[0]}
+            family=${n_words[-1]}
+            if [[ "$ceur_norm" =~ $given ]] && [[ "$ceur_norm" =~ $family ]]; then
+                match_found=1
+                break
+            fi
+        fi
+    done
+
+    # Only output mismatches
+    if [[ $match_found -eq 0 ]]; then
+        ORCIDMISMATCH="yes"
+        echo "In index.html: $name → $orcid → On ORCID.org: $api_full (aliases: $aliases)"
+    fi
+
+  done < <(grep -oP '<span class="CEUR(?:AUTHOR|VOLEDITOR)".*?>.*?</span>' index.html)
+
+  if [[ "$ORCIDMISMATCH" == "yes" ]] ; then
+    echo " "
+    echo " ===> Make sure that the CEURAUTHOR names with ORCIDs match the profile name or its aliases on ORCID.org."
+    echo "      It may be that the CEURAUTHOR name in index.html has a spelling error, or the ORCID is false, or"
+    echo "      the name in the ORCID profile has a spelling error."
+    echo "      The profile should include suitable aliases ('also known as') of the author name. If a mismatch"
+    echo "      cannot be corrected, then remove the ORCID tags from the CEURAUTHOR element in index.html."
+    echo " "
+  else
+    echo "ok"
+    echo " "
+  fi
+
+fi
+
+
+
+echo "(*) Checking mismatches of LI id tags with PDF filenames"
+# Variable to store all error messages encountered during the check
+IDTAGMISMATCHES=""
+
+# Use "index.html" directly. 
+# We capture the entire awk output (which contains potential errors) into IDTAGMISMATCHES.
+IDTAGMISMATCHES=$(grep -E '<li.*id=".*".*href=".*\.pdf"' "index.html" | awk '
+{
+    # 1. Extract the ID value: id="VALUE"
+    if (match($0, /id="([^"]*)"/, id_match)) {
+        LI_ID = id_match[1];
+    } else {
+        next; 
+    }
+
+    # 2. Extract the Filename value: href="FILENAME.pdf"
+    if (match($0, /href="([^"]*\.pdf)"/, href_match)) {
+        PDF_FULL_NAME = href_match[1];
+    } else {
+        next; 
+    }
+
+    # 3. Strip the ".pdf" extension from the full filename
+    PDF_BASE_NAME = substr(PDF_FULL_NAME, 1, length(PDF_FULL_NAME) - 4);
+    
+    # 4. Compare the extracted ID and the base filename
+    if (LI_ID != PDF_BASE_NAME) {
+        
+        # Output a single, descriptive line for the error.
+        printf "Error in index.html: Mismatch of filename \"%s.pdf\" with its LI id tag \"%s\".\n", \
+               PDF_BASE_NAME, LI_ID;
+        
+    }
+}' | grep . || true) # The grep . || true ensures IDTAGMISMATCHES remains empty if no output exists
+
+
+if [[ -z "$IDTAGMISMATCHES" ]]; then
+    echo "ok"
+else
+    echo -e "$IDTAGMISMATCHES"
+    echo " ===> Make sure that LI id tag for papers matches the PDF filename."
+    echo "      For example if the filename is paper12.pdf then the LI id tag must be paper12."
+fi
+
+
+
 
 
 
