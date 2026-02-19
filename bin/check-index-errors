@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # File: check-index-errors
-# Version: 0.91
+# Version: 0.93
 #
 # Check whether the index.html file in a volume has some common errors
 # (c) 2020-2025 by Manfred Jeusfeld. This script is made available under the
@@ -14,7 +14,7 @@
 #
 # Call this script in the directory that contains the index.html file that you want to check.
 #
-# Manfred 2020-03-20 (2025-12-07)
+# Manfred 2020-03-20 (2026-2-19)
 #
 
 if [ ! -f index.html ]; then
@@ -29,7 +29,7 @@ if [ -f index.html.orig ]; then
 fi
 
 
-echo "check-index-errors V0.91 (2025-12-07) CC-BY-SA 4.0"
+echo "check-index-errors V0.93 (2026-02-19) CC-BY-SA 4.0"
 echo ""
 
 # to distinguish regular index files for "semantified" index files
@@ -356,6 +356,18 @@ then echo " ";
      echo " ";
 fi
 
+# Check if the file contains the opening tag but NOT the closing tag on the same line
+# This is necessary for a proper execution of the tests on ORCIDs
+grep -qP '(?=.*<span class="(CEURAUTHOR|CEURVOLEDITOR)")^(?!.*</span>)' index.html
+if [[ $? -eq 0 ]]; then
+     echo " "
+     grep -nP '(?=.*<span class="(CEURAUTHOR|CEURVOLEDITOR)")^(?!.*</span>)' index.html | head -n 1
+     echo " ==========> ERROR (A38) in index.html!!!!"
+     echo "The <span> expression for CEURAUTHOR and CEURVOLEDITOR must be on a single line!"
+fi
+
+
+
 
 # 2025-11-16: Check whether ORCIDs in index.html have matching authors names
 ORCIDSFOUND="true"
@@ -370,7 +382,9 @@ normalize() {
     echo "$1" | iconv -f utf-8 -t ascii//TRANSLIT 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 }
 
+echo " "
 if [[ "$ORCIDSFOUND" == "true" ]]; then
+  echo " "
   echo "(*) Checking whether author names match their profile name on ORCID.org"
   ORCIDMISMATCH="no"
 
@@ -443,7 +457,7 @@ if [[ "$ORCIDSFOUND" == "true" ]]; then
 fi
 
 
-
+echo " "
 echo "(*) Checking mismatches of LI id tags with PDF filenames"
 # Variable to store all error messages encountered during the check
 IDTAGMISMATCHES=""
@@ -488,8 +502,20 @@ else
     echo "      For example if the filename is paper12.pdf then the LI id tag must be paper12."
 fi
 
+echo " "
 
+# Do the official W3C HTML validation check
+echo "(*) Running W3C HTML5 validation..."
+if [ -f  $HOME/bin/vnu.jar ]; then
+  java -jar $HOME/bin/vnu.jar --errors-only index.html
+  if [ $? -eq 0 ]; then
+      echo "ok"
+  fi
+else
+  echo "Download vnu.jar from https://github.com/validator/validator/releases/download/latest/vnu.jar into $HOME/bin for a full check"
+fi
 
+echo " "
 
 
 
