@@ -1,3 +1,12 @@
+## [1.3.1](https://github.com/yamadharma/ceurart-check/compare/v1.3.0...v1.3.1) (2026-03-05)
+
+
+### Bug Fixes
+
+* **scripts:** update from upstream ([b6bdd6e](https://github.com/yamadharma/ceurart-check/commit/b6bdd6e66bd236744e5db82259d77657c8e4c543))
+
+
+
 # [1.3.0](https://github.com/yamadharma/ceurart-check/compare/v1.2.4...v1.3.0) (2026-02-19)
 
 
