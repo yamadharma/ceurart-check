@@ -1,0 +1,118 @@
+#!/bin/bash
+# adapted from code genarated by a LLM; script is thus under a CC0 license
+# call: check-columns pdffilename
+# returns success (0) if pdffile is likely one-column format; returns error code 1 if it is likely two-column
+# The analysis is based on prabability, so no guarantee!
+# Manfred 2025-09-20 (2025-11-25)
+#
+# 2025-11-25: Only use pages 2-3 for the test for speed up.
+
+
+check_two_column_pdf() {
+    local pdf_file="$1"
+    
+    if [[ ! -f "$pdf_file" ]]; then
+        echo "Error: File '$pdf_file' not found" >&2
+        return 1
+    fi
+    
+    # Check if pdftotext is available
+    if ! command -v pdftotext &> /dev/null; then
+        echo "Error: pdftotext not found. Install poppler-utils." >&2
+        return 1
+    fi
+    
+    local temp_text=$(mktemp)
+    
+    # Extract text with layout preservation
+    if ! pdftotext -layout -f 2 -l 3 "$pdf_file" "$temp_text" 2>/dev/null; then
+        echo "Error: Could not extract text from PDF" >&2
+        rm -f "$temp_text"
+        return 1
+    fi
+    
+    # Check if file has content
+    if [[ ! -s "$temp_text" ]]; then
+        echo "Error: No text content extracted from PDF" >&2
+        rm -f "$temp_text"
+        return 1
+    fi
+    
+    local total_lines=0
+    local two_col_candidates=0
+    local max_line_length=0
+    
+    # First pass: find maximum line length to understand page width
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        local line_length=${#line}
+        if [[ $line_length -gt $max_line_length ]]; then
+            max_line_length=$line_length
+        fi
+    done < "$temp_text"
+    
+    # Reset file pointer
+    exec < "$temp_text"
+    
+    # Second pass: analyze column structure
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        ((total_lines++))
+        
+        local line_length=${#line}
+        
+        # Only analyze lines that are at least 60% of max length (to avoid short lines)
+        if [[ $line_length -gt $((max_line_length * 6 / 10)) ]]; then
+            local mid_point=$((line_length / 2))
+            local search_window=$((line_length / 10))  # 10% of line length
+            
+            # Check for a gap of spaces in the middle region
+            for ((i = mid_point - search_window; i <= mid_point + search_window; i++)); do
+                if [[ $i -lt $line_length && $i -gt 0 ]]; then
+                    # Look for a sequence of at least 4 spaces in the middle region
+                    if [[ "${line:$i:4}" == "    " ]]; then
+                        # Check if both sides have substantial content
+                        local left_side="${line:0:$i}"
+                        local right_side="${line:$i}"
+                        
+                        # Remove trailing/leading spaces
+                        left_side="${left_side%"${left_side##*[![:space:]]}"}"
+                        right_side="${right_side#"${right_side%%[![:space:]]*}"}"
+                        
+                        if [[ ${#left_side} -gt 10 && ${#right_side} -gt 10 ]]; then
+                            ((two_col_candidates++))
+                            break
+                        fi
+                    fi
+                fi
+            done
+        fi
+    done
+    
+    rm -f "$temp_text"
+    
+    if [[ $total_lines -eq 0 ]]; then
+        echo "Error: No lines to analyze" >&2
+        return 1
+    fi
+    
+    local ratio=$(echo "scale=3; $two_col_candidates / $total_lines" | bc)
+    
+#    echo "Analysis for: $pdf_file"
+#    echo "Total lines analyzed: $total_lines"
+#    echo "Two-column candidate lines: $two_col_candidates"
+#    echo "Ratio: $ratio"
+#    echo "Max line length: $max_line_length"
+    
+    # More conservative threshold
+    if (( $(echo "$ratio > 0.15" | bc -l) )); then
+#        echo "Result: LIKELY two-column format"
+        return 1
+    else
+#        echo "Result: probably single column"
+        return 0
+    fi
+}
+
+# Usage
+check_two_column_pdf "$1"
