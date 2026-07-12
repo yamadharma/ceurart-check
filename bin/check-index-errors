@@ -1,10 +1,10 @@
 #!/bin/bash
 #
 # File: check-index-errors
-# Version: 0.95
+# Version: 0.95c
 #
 # Check whether the index.html file in a volume has some common errors
-# (c) 2020-2025 by Manfred Jeusfeld. This script is made available under the
+# (c) 2020-2026 by Manfred Jeusfeld. This script is made available under the
 # Creative Commons Attribution-ShareAlike CC-BY-SA 4.0 license.
 #
 # The BASH script is part of the scripts used for CEUR-WS.org. No warrantee whatsoever. No support. 
@@ -14,7 +14,7 @@
 #
 # Call this script in the directory that contains the index.html file that you want to check.
 #
-# Manfred 2020-03-20 (2026-03-04)
+# Manfred 2020-03-20 (2026-07-03)
 #
 
 if [ ! -f index.html ]; then
@@ -23,13 +23,13 @@ if [ ! -f index.html ]; then
 fi
 
 if [[ -f index.html.orig && "$1" != "pre" ]]; then
-    echo "Using check-index-errors-after for rules hilding for edited index.html files ... "
+    echo "Using check-index-errors-after for rules holding for edited index.html files ... "
     check-index-errors-after "$@"
     exit 0
 fi
 
 
-echo "check-index-errors V0.95 (2026-03-04) CC-BY-SA 4.0"
+echo "check-index-errors V0.95c (2026-06-06) CC-BY-SA 4.0"
 echo ""
 
 # to distinguish regular index files for "semantified" index files
@@ -253,7 +253,7 @@ fi
 
 for KEYWORD in CEURTITLE CEURAUTHOR CEURVOLTITLE
 do
-  if grep $KEYWORD index.html | grep -v 'Jr.' | grep -q "\.</span>";
+  if grep $KEYWORD index.html | grep -v 'Jr.' | grep -v 'Sr.' |grep -q "\.</span>";
   then echo " ";
        echo " ==========> ERROR (A27) in index.html!!!!";
        echo "$KEYWORD ends with a '.'. It should be just a label not ending with a dot.";
@@ -504,10 +504,14 @@ fi
 
 echo " "
 
-# Do the official W3C HTML validation check
+# Do the official W3C HTML validation check; requires a recent Java JRE
 echo "(*) Running W3C HTML5 validation..."
 if [ -f  $HOME/bin/vnu.jar ]; then
-  java -jar $HOME/bin/vnu.jar --errors-only index.html
+  JAVAEXEC="java"
+  if [ -e  /usr/lib/jvm/java-21-openjdk-amd64/bin/java ]; then
+    JAVAEXEC="/usr/lib/jvm/java-21-openjdk-amd64/bin/java"
+  fi
+  $JAVAEXEC -jar $HOME/bin/vnu.jar --errors-only index.html
   if [ $? -eq 0 ]; then
       echo "ok"
   fi
@@ -579,6 +583,94 @@ if [ $? -eq 0 ]; then echo "ok"; fi
 echo " "
 
 
+# 2026-03-07: Diversity rule: Check if a CEURVOLEDITOR is CEURAUTHOR of more than one paper (A41)
+echo "(*) Checking diversity rule for editor/author overlap (A41) ..."
+
+EDITORS=$(grep 'class="CEURVOLEDITOR"' index.html | sed -e 's/.*class="CEURVOLEDITOR"[^>]*>//' -e 's/<\/span>.*//' | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
+AUTHORS=$(sed -n '/<li id="preface">/,/<\/li>/!p' index.html | grep 'class="CEURAUTHOR"' | sed -e 's/.*class="CEURAUTHOR">//' -e 's/<\/span>.*//' | sed 's/^[ \t]*//;s/[ \t]*$//')
+
+EDITOR_OVERLAP_ERROR="no"
+
+if [ -n "$EDITORS" ]; then
+    while IFS= read -r editor; do
+        if [ -n "$editor" ]; then
+            # Count occurrences of the editor name in the research paper author list 
+            COUNT=$(echo "$AUTHORS" | grep -Fxc "$editor")
+            
+            if [ "$COUNT" -gt 1 ]; then
+                EDITOR_OVERLAP_ERROR="yes"
+                echo " Editor '$editor' is an author of $COUNT research papers."
+            fi
+        fi
+    done <<< "$EDITORS"
+fi
+
+if [[ "$EDITOR_OVERLAP_ERROR" == "no" ]]; then
+    echo "ok"
+else
+    echo " ==========> ERROR (A41) in index.html!!!!"
+fi
+
+echo " "
+
+
+echo "(*) Checking minimum number of papers ..."
+NRWORDS=`grep -wc CEURTITLE index.html`
+if [[ "$NRWORDS" -ge "6" ]]; then 
+    echo "ok"
+else
+#    echo " ==========> ERROR (A42) in index.html!!!!";
+    echo "The index.html file lists $NRWORDS papers with a CEURTITLE. Minimum is 6."
+fi
+
+echo " "
+
+
+# 2026-05-05: Check for balance between Editor and Author ORCIDs (A43)
+echo "(*) Checking ORCID coverage balance ..."
+EDITOR_ORCIDS=$(grep "CEURVOLEDITOR" index.html | grep -c "itemid")
+AUTHOR_ORCIDS=$(grep "CEURAUTHOR" index.html | grep -c "itemid")
+if [ "$EDITOR_ORCIDS" -gt "$AUTHOR_ORCIDS" ]; then
+    echo " "
+    echo " ==========> ERROR (A43) in index.html!!!!"
+    echo " There are more ORCIDs for editors ($EDITOR_ORCIDS) than for authors ($AUTHOR_ORCIDS)."
+    echo " We suggest that at least as many authors are semantified as editors."
+    echo " Most paper PDFs have ORCIDs for authors. So pick the data from there!"
+    echo " "
+else
+    echo "ok"
+fi
+
+echo " "
+
+
+# 2026-06-06: Catch some deviances from our template; This is mostly to guarantee that the import filters
+# of DBLP will work  
+
+echo "(*) Checking prescribed tags ..."
+
+PRESCRIBED_TAGS=(
+    '<span class="CEURCOLOCATED">'
+    '<span class="CEURFULLTITLE">'
+    '<div class="CEURTOC">'
+)
+TAG_ERROR="no"
+
+for CTAG in "${PRESCRIBED_TAGS[@]}"
+do
+    if ! grep -q "$CTAG" index.html; then
+        echo "The index.html file does not use $CTAG like in our template ceur-ws.org/Vol-XXX";
+        TAG_ERROR="yes"
+    fi
+done
+
+if [[ "$TAG_ERROR" == "yes" ]]; then
+    echo " ==========> ERROR (A44) in index.html!!!!"
+    echo " ==========> Make sure you use the tags like in the template ceur-ws.org/Vol-XXX/index.html"
+    echo " "
+else
+    echo "ok"
+fi
 
 
 
