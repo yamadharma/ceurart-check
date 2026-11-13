@@ -1,3 +1,9 @@
+## [1.3.3](https://github.com/yamadharma/ceurart-check/compare/v1.3.2...v1.3.3) (2026-11-13)
+
+### Bug Fixes
+
+* **update:** sync with upstream ([ee4961e](https://github.com/yamadharma/ceurart-check/commit/ee4961e5407f3f11dc0b74d64e01c4c165557481))
+
 ## [1.3.2](https://github.com/yamadharma/ceurart-check/compare/v1.3.1...v1.3.2) (2026-07-12)
 
 ### Bug Fixes
