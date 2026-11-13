@@ -1,7 +1,6 @@
 #!/bin/bash
 #
 # File: check-index-errors
-# Version: 0.95c
 #
 # Check whether the index.html file in a volume has some common errors
 # (c) 2020-2026 by Manfred Jeusfeld. This script is made available under the
@@ -14,22 +13,46 @@
 #
 # Call this script in the directory that contains the index.html file that you want to check.
 #
-# Manfred 2020-03-20 (2026-07-03)
+# Manfred 2020-03-20 
 #
+
+
+if [[ `uname` != "Linux" ]] ; then
+    echo "This script required Linux. It will not run correctly under MacOS or other operating systems."
+    exit 1
+fi
+
+
+#Check whether all required tools are installed
+missing=()
+
+command -v pdfinfo         >/dev/null 2>&1 || missing+=("poppler-utils (pdfinfo)")
+command -v perl              >/dev/null 2>&1 || missing+=("perl")
+command -v java              >/dev/null 2>&1 || missing+=("java")
+
+if [ ${#missing[@]} -ne 0 ]; then
+    echo "Error: Missing required dependency/dependencies: ${missing[*]}" >&2
+    exit 1
+fi
+
 
 if [ ! -f index.html ]; then
     echo "No file index.html in this directory. Call this script in the directory that contains your submissions files."
     exit 1
 fi
 
+## Note that this branches to another script not available to workshop organizers
 if [[ -f index.html.orig && "$1" != "pre" ]]; then
-    echo "Using check-index-errors-after for rules holding for edited index.html files ... "
+    echo "Using check-index-errors-after for rules holding for index.html files edited by CEUR-WS team members ... "
     check-index-errors-after "$@"
     exit 0
 fi
 
 
-echo "check-index-errors V0.95c (2026-06-06) CC-BY-SA 4.0"
+INDEXERRCOUNT=0
+
+
+echo "check-index-errors V0.95g (2026-11-09) CC-BY-SA 4.0"
 echo ""
 
 # to distinguish regular index files for "semantified" index files
@@ -38,34 +61,40 @@ if grep -q "foaf:" index.html;
 then indexformat=semantic
 fi
 
+
 if grep -q "Workshop on Publishing Papers" index.html;
 then echo " ";
      echo " ==========> ERROR (A1) in index.html!!!!";
      echo "String 'Workshop on Publishing Papers' found in index.html";
+     ((INDEXERRCOUNT++))
 fi
 
 if grep -q "OPub" index.html;
 then echo " ";
      echo " ==========> ERROR (A2) in index.html!!!!";
      echo "String 'OPub' found in index.html";
+     ((INDEXERRCOUNT++))
 fi
 
 if grep -q -E "Coeditor|Carlos Nombre|Anne Foé" index.html;
 then echo " ";
      echo " ==========> ERROR (A3) in index.html!!!!";
      echo "String 'Coeditor' or 'Carlos Nombre' or 'Anne Foé' left over from template Vol-XXX found in index.html";
+     ((INDEXERRCOUNT++))
 fi
 
 if grep -q "<li>" index.html;
 then echo " ";
      echo " ==========> ERROR (A4) in index.html!!!!";
      echo "<li> element without ID found in index.html";
+     ((INDEXERRCOUNT++))
 fi
 
 if grep -q "workshop-website.org/loc" index.html;
 then echo " ";
      echo " ==========> ERROR (A5) in index.html!!!!";
      echo "wrong URL workshop-website.org/loc found in index.html";
+     ((INDEXERRCOUNT++))
 fi
 
 
@@ -73,6 +102,7 @@ if grep -q "Copying permitted for private and academic purposes" index.html;
 then echo " ";
      echo " ==========> ERROR (A6) in index.html!!!!";
      echo "Old non-CC-BY copyright statement";
+     ((INDEXERRCOUNT++))
 fi
 
 grep -q  "../ceur-ws.css" index.html
@@ -80,12 +110,14 @@ if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A7) in index.html!!!!";
      echo "wrong stylesheet; must be ../ceur-ws.css";
+     ((INDEXERRCOUNT++))
 fi
 
 if grep -q "JJJJ" index.html;
 then echo " ";
      echo " ==========> ERROR (A8) in index.html!!!!";
      echo "Coypyright year JJJJ must be set in the header";
+     ((INDEXERRCOUNT++))
 fi
 
 
@@ -94,6 +126,7 @@ if [[ $? == 0 ]];
 then echo " ";
      echo " ==========> ERROR (A9) in index.html!!!!";
      echo "index.html should not be encoded in UTF-16; use iconv to convert to UTF-8";
+     ((INDEXERRCOUNT++))
 fi
 
 grep -q  "urn:nbn:de:0074" index.html
@@ -101,6 +134,7 @@ if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A10) in index.html!!!!";
      echo "Prefix urn:nbn:de:0074 missing in URN";
+     ((INDEXERRCOUNT++))
 fi
 
 grep -q  "CEURTOC" index.html
@@ -108,6 +142,7 @@ if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A11) in index.html!!!!";
      echo "DIV section CEURTOC missing; compare to Vol-XXX/index.html";
+     ((INDEXERRCOUNT++))
 fi
 
 
@@ -115,6 +150,7 @@ if grep -q "<script" index.html;
 then echo " ";
      echo " ==========> ERROR (A12) in index.html!!!!";
      echo "index.html contains a script; scripts are forbidden";
+     ((INDEXERRCOUNT++))
 fi
 
 grep -q  "CEURLOCTIME" index.html
@@ -122,6 +158,7 @@ if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A13) in index.html!!!!";
      echo "CEURLOCTIME element is missing; compare to Vol-XXX/index.html";
+     ((INDEXERRCOUNT++))
 fi
 
 if [ $indexformat == regular ];
@@ -131,6 +168,7 @@ then
        echo " ==========> ERROR (A14) in index.html!!!!";
        echo "Some CEURAUTHOR lines contain commas. Use one line per CEURAUTHOR. A CEURAUTHOR is a single person. Use multiple CEURAUTHOR fields when a paper has multiple authors.";
        grep -o -P '(?<=CEURAUTHOR">).*(?=</span)' index.html | grep ','
+       ((INDEXERRCOUNT++))
   fi
 
   if grep -o -P '(?<=class="CEUR).*(?=</span)' index.html | grep '<' | grep -v '</span' ;
@@ -138,6 +176,7 @@ then
        echo " ==========> ERROR (A15) in index.html!!!!";
        echo "Some CEUR span field contains '<' e.g. for a HTML tag. CEUR span fields may not contain HTML tags!";
        grep -o -P '(?<=class="CEUR).*(?=</span)' index.html | grep '<' | grep -v '</span'
+       ((INDEXERRCOUNT++))
   fi
 fi
 
@@ -145,6 +184,7 @@ if grep -q "http://ceur-ws.org/ceur-ws.css" index.html;
 then echo " ";
      echo " ==========> ERROR (A16) in index.html!!!!";
      echo "index.html contains absolute path http//ceur-ws.org/ceur-ws.css; must be ../ceur-ws.css";
+     ((INDEXERRCOUNT++))
 fi
 
 for KEYWORD in CEURVERSION CEURVOLTITLE CEURFULLTITLE CEURURN CEURPUBYEAR CEURVOLACRONYM CEURTOC CEURLOCTIME CEURPUBDATE CEURVOLNR
@@ -155,6 +195,7 @@ do
     echo " ==========> ERROR (A17) in index.html!!!!";
     echo "The label $KEYWORD must have exactly one value in index.html. It your case, the value is $NRWORDS."
     grep $KEYWORD index.html
+    ((INDEXERRCOUNT++))
   fi
 done
 
@@ -166,6 +207,8 @@ do
     echo " ==========> ERROR (A17a) in index.html!!!!";
     echo "The label $KEYWORD must have exactly one value in index.html. It your case, the value is $NRWORDS."
     grep $KEYWORD index.html
+    echo " ";
+    ((INDEXERRCOUNT++))
   fi
 done
 
@@ -178,6 +221,7 @@ do
     echo " ==========> ERROR (A18) in index.html!!!!";
     echo "The label $KEYWORD must have at least one value in index.html. It your case, the value is $NRWORDS."
     echo " ";
+    ((INDEXERRCOUNT++))
   fi
 done
 
@@ -188,15 +232,25 @@ then echo " ";
      echo " ==========> ERROR (A19) in index.html!!!!";
      echo "The validator link at the end of index.html must initially include the parameter 'Vol-XXX'. Otherwise, our scripts cannot insert the right volume number here!";
      echo " ";
+     ((INDEXERRCOUNT++))
 fi
 
-
-if grep CEURAUTHOR index.html | grep -q " </span>";
-then echo " ";
-     echo " ==========> ERROR (A20) in index.html!!!!";
-     echo "index.html contains CEURAUTHOR SPAN elements that end with a blank character. This creates unwanted variants for labels such as author names.";
-       grep -n -P ' </span>' index.html
+# Check if any CEUR span element (except CEURTOC) starts or ends with whitespace
+if grep -P 'class="CEUR(?!TOC)[^"]*">\s+|\s+</span>' index.html > /dev/null; then
+     echo " "
+     echo " ==========> ERROR (A20) in index.html!!!!"
+     echo "index.html contains CEUR tag elements that start or end with a blank character."
+     echo "This creates unwanted leading or trailing spaces in metadata labels. Remove the leading and trailing blanks!"
+     grep -n -P 'class="CEUR(?!TOC)[^"]*">\s+|\s+</span>' index.html
+     ((INDEXERRCOUNT++))
 fi
+
+#if grep CEURAUTHOR index.html | grep -q " </span>";
+#then echo " ";
+#     echo " ==========> ERROR (A20) in index.html!!!!";
+#     echo "index.html contains CEURAUTHOR SPAN elements that end with a blank character. This creates unwanted variants for labels such as author names.";
+#       grep -n -P ' </span>' index.html
+#fi
 
 if grep CEURAUTHOR index.html | grep -q " and";
 then echo " ";
@@ -204,6 +258,7 @@ then echo " ";
      echo "index.html contains CEURAUTHOR elements using 'and' as separator instead ','.";
      grep -n -P 'CEURAUTHOR.*</span>, and' index.html;
      echo " ";
+     ((INDEXERRCOUNT++))
 fi
 
 # extract certain CEUR fields from the index.html file
@@ -215,6 +270,7 @@ if grep -q "Mary Y. Writter" index.html;
 then echo " ";
      echo " ==========> ERROR (A22) in index.html!!!!";
      echo "index.html contains a synthetic author name from Vol-XXX, here Mary Y. Writter";
+     ((INDEXERRCOUNT++))
 fi
 
 DUPPDFLINKS=`grep "<a href=" index.html | grep pdf | sed "s/<a href/\\n<a href/g" | sed 's/\"/\"><\/a>\n/2' | grep href | sort | uniq --count | grep -v "1 <a"`
@@ -223,6 +279,7 @@ then echo " ";
      echo " ==========> ERROR (A23) in index.html!!!!";
      echo " index.html contains multiple links to the same PDF file!";
      echo $DUPPDFS
+     ((INDEXERRCOUNT++))
 fi
 
 DUPTITLES=`grep "CEURTITLE" index.html | sed "s/<a href/\\n<a href/g" | sed 's/\"/\"><\/a>\n/2' | grep href | sort | uniq --count | grep -Ev "^[[:space:]]*1 "`
@@ -231,6 +288,7 @@ then echo " ";
      echo " ==========> ERROR (A24) in index.html!!!!";
      echo " index.html contains multiple CEURTITLEs with the same label!";
      echo $DUPTITLES
+     ((INDEXERRCOUNT++))
 fi
 
 
@@ -241,6 +299,7 @@ then
        echo " ==========> ERROR (A25) in index.html!!!!";
        echo "Some papers appear to be in subdirectories or use absolute URLs. They shall be in the same directory as index.html and use relative URLs";
        grep -o -P '(?<=li id=).*(?=pdf)' index.html | grep '/'
+      ((INDEXERRCOUNT++))
   fi
 fi
 
@@ -249,6 +308,7 @@ if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A26) in index.html!!!!";
      echo "CEURVOLACRONYM must contain the year in which the event took place like in 'ABCD 2023'";
+     ((INDEXERRCOUNT++))
 fi
 
 for KEYWORD in CEURTITLE CEURAUTHOR CEURVOLTITLE
@@ -258,6 +318,7 @@ do
        echo " ==========> ERROR (A27) in index.html!!!!";
        echo "$KEYWORD ends with a '.'. It should be just a label not ending with a dot.";
        grep -n -P $KEYWORD index.html |  grep -v 'Jr.' | grep  '\.</span>'
+      ((INDEXERRCOUNT++))
   fi
 done
 
@@ -267,6 +328,7 @@ if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A28) in index.html!!!!";
      echo "The name of the person after 'submitted by' in end the end of index.html must be followed by a comma ','.";
+     ((INDEXERRCOUNT++))
 fi
 
 grep -q  "<body>" index.html
@@ -274,6 +336,7 @@ if [[ $? != 0 ]];
 then echo " ";
      echo " ==========> ERROR (A29) in index.html!!!!";
      echo "The index.html file must contain the tag 'body' without any parameters.";
+     ((INDEXERRCOUNT++))
 fi
 
 
@@ -293,6 +356,7 @@ if [[ $ALLPDFSLINKED == "unlinkedpdffound" ]] ; then
   echo " ==========> ERROR (A30) in index.html!!!!";
   echo "Make sure all paper PDFs are linked in index.html";
   echo " ";
+  ((INDEXERRCOUNT++))
 fi
 
 
@@ -311,6 +375,7 @@ if [[ $ALLPDFSEXISTS == "no" ]] ; then
   echo " ==========> ERROR (A31) in index.html!!!!";
   echo "Make sure all references to paper PDFs in index.html also exist as file in the same directory"
   echo " "
+  ((INDEXERRCOUNT++))
 fi
 
 
@@ -320,24 +385,28 @@ if [[ "$DUPCOUNTRESULT" != "" ]];
 then echo " ";
      echo " ==========> ERROR (A32) in index.html!!!!";
      echo "The index.html file has multiple references to the same PDF file.";
+     ((INDEXERRCOUNT++))
 fi
 
 if grep -q "<script" index.html;
 then echo " ";
      echo " ==========> ERROR (A33) in index.html!!!!";
      echo "Script keyword found in index.html; we do not allow JavaScript on our pages";
+     ((INDEXERRCOUNT++))
 fi
 
 if grep -q "http://" index.html;
 then echo " ";
      echo " ==========> ERROR (A34) in index.html!!!!";
      echo "Change occurrences of 'http://' to 'https://' if the URL is also working with https://";
+     ((INDEXERRCOUNT++))
 fi
 
 if grep -q "0000-0000-0000-0000" index.html;
 then echo " ";
      echo " ==========> ERROR (A35) in index.html!!!!";
-     echo "The index.html file has a dummy ORCID 0000-0000-0000-0000. Either correct or remove the tags itemcope itemtype and itemid";
+     echo "The index.html file has a dummy ORCID 0000-0000-0000-0000. Either correct or remove the tags itemscope itemtype and itemid";
+     ((INDEXERRCOUNT++))
 fi
 
 grep -q  "0074-XXX-C" index.html
@@ -346,6 +415,7 @@ then echo " ";
      echo " ==========> ERROR (A36) in index.html!!!!";
      echo "Do not change the URN template from Vol-XXX in the submission index.html file; we shall assign the URN automatically";
      echo " ";
+     ((INDEXERRCOUNT++))
 fi
 
 grep -q  "\"CEURVOLNR\">Vol-XXX" index.html
@@ -354,6 +424,7 @@ then echo " ";
      echo " ==========> ERROR (A37) in index.html!!!!";
      echo "Do not change the volume number Vol-XXX in the submission index.html file; we shall assign it automatically";
      echo " ";
+     ((INDEXERRCOUNT++))
 fi
 
 # Check if the file contains the opening tag but NOT the closing tag on the same line
@@ -364,6 +435,7 @@ if [[ $? -eq 0 ]]; then
      grep -nP '(?=.*<span class="(CEURAUTHOR|CEURVOLEDITOR)")^(?!.*</span>)' index.html | head -n 1
      echo " ==========> ERROR (A38) in index.html!!!!"
      echo "The <span> expression for CEURAUTHOR and CEURVOLEDITOR must be on a single line!"
+     ((INDEXERRCOUNT++))
 fi
 
 
@@ -443,12 +515,16 @@ if [[ "$ORCIDSFOUND" == "true" ]]; then
 
   if [[ "$ORCIDMISMATCH" == "yes" ]] ; then
     echo " "
-    echo " ===> Make sure that the CEURAUTHOR names with ORCIDs match the profile name or its aliases on ORCID.org."
+    echo " ===> Check that the CEURAUTHOR names with ORCIDs match the profile name or its aliases on ORCID.org."
     echo "      It may be that the CEURAUTHOR name in index.html has a spelling error, or the ORCID is false, or"
     echo "      the name in the ORCID profile has a spelling error."
     echo "      The profile should include suitable aliases ('also known as') of the author name. If a mismatch"
     echo "      cannot be corrected, then remove the ORCID tags from the CEURAUTHOR element in index.html."
+    echo "      If you manually approve that the ORCID profile is correct but just lacks an alias, you do not"
+    echo "      have to remove the ORCID from index.html. Just inform the author to consider to add an alias to"
+    echo "      their ORCID profile."
     echo " "
+    ((INDEXERRCOUNT++))
   else
     echo "ok"
     echo " "
@@ -500,6 +576,7 @@ else
     echo -e "$IDTAGMISMATCHES"
     echo " ===> Make sure that LI id tag for papers matches the PDF filename."
     echo "      For example if the filename is paper12.pdf then the LI id tag must be paper12."
+    ((INDEXERRCOUNT++))
 fi
 
 echo " "
@@ -514,6 +591,8 @@ if [ -f  $HOME/bin/vnu.jar ]; then
   $JAVAEXEC -jar $HOME/bin/vnu.jar --errors-only index.html
   if [ $? -eq 0 ]; then
       echo "ok"
+  else
+      ((INDEXERRCOUNT++))
   fi
 else
   echo "Download vnu.jar from https://github.com/validator/validator/releases/download/latest/vnu.jar into $HOME/bin for a full check"
@@ -546,7 +625,11 @@ perl -0777 -Mutf8 -ne '
   exit 1 if $error;
 ' index.html
 
-if [ $? -eq 0 ]; then echo "ok"; fi
+if [ $? -eq 0 ]; then
+  echo "ok"; 
+else
+  ((INDEXERRCOUNT++))
+fi
 
 
 # 2026-02-28: Verify physical PDF matches the CEURPAGES metadata (A40)
@@ -578,7 +661,11 @@ perl -0777 -Mutf8 -ne '
   exit 1 if $error;
 ' index.html
 
-if [ $? -eq 0 ]; then echo "ok"; fi
+if [ $? -eq 0 ]; then
+  echo "ok"; 
+else
+  ((INDEXERRCOUNT++))
+fi
 
 echo " "
 
@@ -609,6 +696,7 @@ if [[ "$EDITOR_OVERLAP_ERROR" == "no" ]]; then
     echo "ok"
 else
     echo " ==========> ERROR (A41) in index.html!!!!"
+# not a formal error    ((INDEXERRCOUNT++))
 fi
 
 echo " "
@@ -621,6 +709,7 @@ if [[ "$NRWORDS" -ge "6" ]]; then
 else
 #    echo " ==========> ERROR (A42) in index.html!!!!";
     echo "The index.html file lists $NRWORDS papers with a CEURTITLE. Minimum is 6."
+    ((INDEXERRCOUNT++))
 fi
 
 echo " "
@@ -637,6 +726,7 @@ if [ "$EDITOR_ORCIDS" -gt "$AUTHOR_ORCIDS" ]; then
     echo " We suggest that at least as many authors are semantified as editors."
     echo " Most paper PDFs have ORCIDs for authors. So pick the data from there!"
     echo " "
+# not a formal error    ((INDEXERRCOUNT++))
 else
     echo "ok"
 fi
@@ -650,9 +740,9 @@ echo " "
 echo "(*) Checking prescribed tags ..."
 
 PRESCRIBED_TAGS=(
-    '<span class="CEURCOLOCATED">'
-    '<span class="CEURFULLTITLE">'
-    '<div class="CEURTOC">'
+    '"CEURCOLOCATED"'
+    '"CEURFULLTITLE"'
+    '"CEURTOC"'
 )
 TAG_ERROR="no"
 
@@ -668,9 +758,126 @@ if [[ "$TAG_ERROR" == "yes" ]]; then
     echo " ==========> ERROR (A44) in index.html!!!!"
     echo " ==========> Make sure you use the tags like in the template ceur-ws.org/Vol-XXX/index.html"
     echo " "
+    ((INDEXERRCOUNT++))
 else
     echo "ok"
 fi
+
+echo " "
+
+
+grep -i "li id=" index.html |  grep -iq  "href"
+if [[ $? != 0 ]];
+then echo " ";
+     echo " ==========> ERROR (A45) in index.html!!!!";
+     echo "A named LI element must have the HREF to the paper in the same line!";
+     grep -ni "li id=" index.html | grep -iv "href"
+     ((INDEXERRCOUNT++))
+fi
+
+
+# Check that every CEURSESSION tag contains at least one CEURTITLE element
+echo "(*) Checking that every CEURSESSION contains at least one CEURTITLE..."
+
+perl -0777 -Mutf8 -ne '
+  binmode(STDOUT, ":utf8");
+  
+  # Find all CEURSESSION strings and their following text blocks
+  while (/<span class="CEURSESSION">(.*?)<\/span>/gs) {
+      my $session_name = $1;
+      my $pos = pos($_);
+      
+      # Get the substring from the current session until the next session or end of file
+      my $remainder = substr($_, $pos);
+      if ($remainder =~ /(.*?)(?=<span class="CEURSESSION">|$)/s) {
+          my $section_content = $1;
+          if ($section_content !~ /class="CEURTITLE"/) {
+              print "Error in index.html: CEURSESSION \"$session_name\" does not contain any CEURTITLE element.\n";
+              $error = 1;
+          }
+      }
+  }
+  exit 1 if $error;
+' index.html
+
+if [ $? -eq 0 ]; then
+  echo "ok"; 
+else
+  echo " ==========> ERROR (A46) in index.html!!!!"
+  echo "Every session section starting with CEURSESSION must contain at least one paper title with CEURTITLE before the next CEURSESSION starts."
+  ((INDEXERRCOUNT++))
+fi
+
+echo " "
+
+
+# Check that li elements with an id matching *reface* (case-insensitive) do NOT use CEURTITLE or CEURAUTHOR
+echo "(*) Checking that preface-like LI groups do not contain CEURTITLE or CEURAUTHOR..."
+
+perl -0777 -Mutf8 -ne '
+  binmode(STDOUT, ":utf8");
+  
+  my $error = 0;
+  # Match each <li> element and its content
+  while (/<li\b([^>]*)>(.*?)<\/li>/gis) {
+      my $attrs = $1;
+      my $content = $2;
+      
+      # Check if the id attribute contains "reface" case-insensitively
+      if ($attrs =~ /id\s*=\s*["\x27]?([^"\x27\s>]+)["\x27]?/is) {
+          my $matched_id = $1;
+          my $id_val = lc($matched_id);
+          if ($id_val =~ /reface/) {
+              # Check if CEURTITLE or CEURAUTHOR is present inside this li group
+              if ($content =~ /class="CEUR(?:TITLE|AUTHOR)"/is) {
+                  print "Error in index.html: LI element with id=\"$matched_id\" contains forbidden CEURTITLE or CEURAUTHOR tags.\n";
+                  $error = 1;
+              }
+          }
+      }
+  }
+  exit 1 if $error;
+' index.html
+
+if [ $? -eq 0 ]; then
+  echo "ok"; 
+else
+  echo " ==========> ERROR (A47) in index.html!!!!"
+  echo "Prefaces or other frontmatter must not contain CEURTITLE or CEURAUTHOR metadata tags."
+  ((INDEXERRCOUNT++))
+fi
+
+echo " "
+
+
+# Check that the content of CEURVOLACRONYM and CEURCOLOCATED are different
+echo "(*) Checking that CEURVOLACRONYM and CEURCOLOCATED contents are different..."
+
+acronym_val=$(grep -oP '(?<=class="CEURVOLACRONYM">)[^<]+' index.html | head -n 1)
+colocated_val=$(grep -oP '(?<=class="CEURCOLOCATED">)[^<]+' index.html | head -n 1)
+
+if [[ -n "$acronym_val" && -n "$colocated_val" && "$acronym_val" == "$colocated_val" ]]; then
+     echo " ==========> ERROR (A48) in index.html!!!!"
+     echo "The content of CEURVOLACRONYM ('$acronym_val') and CEURCOLOCATED ('$colocated_val') must be different."
+     ((INDEXERRCOUNT++))
+else
+     echo "ok"
+fi
+
+echo " "
+
+
+if [ "$INDEXERRCOUNT" -eq 0 ]; then 
+  echo " "
+  echo ">>> No severe errors in index.html found. Congrats!"
+  echo " "
+else
+  echo " "
+  echo ">>> Severe errors found: $INDEXERRCOUNT"
+  echo " "
+fi
+
+exit $INDEXERRCOUNT
 
 
 
